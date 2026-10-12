@@ -1,6 +1,7 @@
 export type ToolDomain =
   | "drawing"
   | "geometry"
+  | "entity"
   | "workflow"
   | "grading"
   | "point"
