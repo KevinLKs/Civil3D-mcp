@@ -347,7 +347,7 @@ bridge port (default `3000`).
 
 ### 2 — Build & Load the C# Plugin
 
-**Prerequisites:** Civil 3D 2026, .NET 8 SDK, and licensed local Civil 3D managed
+**Prerequisites:** Civil 3D 2026 (with the Autodesk .NET 10 update), .NET 10 SDK, and licensed local Civil 3D managed
 API assemblies. Autodesk binaries are intentionally not tracked or published by
 this repository.
 
@@ -355,7 +355,7 @@ this repository.
 $refs = "C:\Program Files\Autodesk\AutoCAD 2026\C3D"
 dotnet build .\Civil3D-MCP-Plugin\Civil3DMcpPlugin.csproj -c Release `
   /p:Civil3DReferencesPath="$refs"
-# Output: Civil3D-MCP-Plugin\bin\Release\net8.0-windows\Civil3DMcpPlugin.dll
+# Output: Civil3D-MCP-Plugin\bin\Release\net10.0-windows\Civil3DMcpPlugin.dll
 ```
 
 An untracked `C_References` directory remains the local fallback when
@@ -371,6 +371,20 @@ AecBaseMgd.dll
 AeccDbMgd.dll
 AeccPressurePipesMgd.dll
 ```
+
+On a standard install these DLLs are split across three folders, so pointing
+`Civil3DReferencesPath` at `C3D` alone fails. Copy them into `C_References`
+(already gitignored) instead:
+
+| DLL | Location under `C:\Program Files\Autodesk\AutoCAD 2026` |
+| --- | --- |
+| `accoremgd.dll`, `AcDbMgd.dll`, `acmgd.dll` | root folder |
+| `AecBaseMgd.dll` | `ACA` |
+| `AeccDbMgd.dll`, `AeccPressurePipesMgd.dll` | `C3D` |
+
+Civil 3D 2026 installs that have Autodesk's .NET 10 in-place update ship
+assemblies built on .NET 10, so the plugin targets `net10.0-windows`. Building
+against those assemblies with a .NET 8 target fails with error CS1705.
 
 **Load into Civil 3D:**
 
