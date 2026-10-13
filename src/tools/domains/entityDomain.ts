@@ -37,6 +37,7 @@ const EditSchema = z.object({
   xLine1: Point2DSchema.optional().describe("Linear dimension: first extension line origin."),
   xLine2: Point2DSchema.optional().describe("Linear dimension: second extension line origin."),
   dimLine: Point2DSchema.optional().describe("Linear dimension: a point on the dimension line (sets its offset)."),
+  textPosition: Point2DSchema.optional().describe("Dimension text location (middle of the text). Applied after dimension points."),
   vertices: z.array(Point2DSchema).min(2).optional().describe("Replace all vertices of a line, polyline or leader."),
   colorIndex: z.number().int().min(0).max(256).optional().describe("ACI color: 0 = ByBlock, 256 = ByLayer."),
   linetype: z.string().optional().describe("Linetype name; must already be loaded in the drawing."),
