@@ -255,6 +255,21 @@ public static class EntityCommands
           changed.Add("dimensionPoints");
         }
 
+        // Applied after dimension points, which reset text to its default spot.
+        var textPosition = ReadPoint(edit["textPosition"]);
+        if (textPosition is { } tp)
+        {
+          if (entity is not Dimension dimensionForText)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: textPosition can only be set on dimensions.");
+          }
+
+          dimensionForText.TextPosition = new Point3d(tp.X, tp.Y, dimensionForText.TextPosition.Z);
+          dimensionForText.UsingDefaultTextPosition = false;
+          dimensionForText.RecomputeDimensionBlock(true);
+          changed.Add("textPosition");
+        }
+
         if (edit["vertices"] is JsonArray vertexNodes)
         {
           var vertices = vertexNodes.Select(node => ReadPoint(node)
@@ -616,6 +631,7 @@ public static class EntityCommands
       case Dimension dimension:
         info["measurement"] = R(dimension.Measurement);
         info["dimensionText"] = dimension.DimensionText;
+        info["textPosition"] = P(dimension.TextPosition);
         if (includeGeometry && dimension is RotatedDimension rd)
         {
           info["xLine1"] = P(rd.XLine1Point);
