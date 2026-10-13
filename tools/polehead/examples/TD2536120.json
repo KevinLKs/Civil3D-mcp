@@ -1,0 +1,1352 @@
+{
+ "job": "TD2536120",
+ "poles": [
+  {
+   "frame": 0,
+   "pole": "1414703E",
+   "profiles": [
+    {
+     "L": "L/NW",
+     "side": "R",
+     "items": [
+      {
+       "t": "pri",
+       "h": "41'6\"",
+       "c": [
+        "IN: 4/C 336ATW 16KV"
+       ],
+       "k": "L"
+      },
+      {
+       "t": "fhla",
+       "h": "38'6\"",
+       "c": [
+        "2-F/H'S",
+        "IN: 2-L/A'S"
+       ],
+       "k": "C"
+      },
+      {
+       "t": "xfmr",
+       "h": "35'6\"",
+       "c": [
+        "25KVA XFMR"
+       ],
+       "k": "L"
+      },
+      {
+       "t": "xr",
+       "h": "33'",
+       "c": [
+        "1/0AT 120V"
+       ]
+      },
+      {
+       "t": "sg",
+       "h": "32'",
+       "c": [
+        "9/32\" SG"
+       ],
+       "k": "L"
+      },
+      {
+       "t": "xb",
+       "h": "24'6\"",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "22'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "21'",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 2018, INSP. N/A",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-HIGH FIRE AREA TIER 3",
+    "-FOOT ACCESS R/O 1077 BURTONWOOD AVE"
+   ],
+   "gps": [
+    "34\u00b011'32.19\"",
+    "118\u00b051'58.20\""
+   ],
+   "elev": "821",
+   "tlm": {
+    "ex": [
+     "50",
+     "31.57",
+     "8",
+     "63"
+    ],
+    "pr": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "cz": "5",
+    "pc": "HAMPSHIRE 16KV",
+    "addr": [
+     [
+      "1065 BURTONWOOD AVE",
+      "322010-238159"
+     ],
+     [
+      "1066 WINDSOR DR",
+      "322010-219389"
+     ],
+     [
+      "1076 WINDSOR DR",
+      "222014-151200"
+     ],
+     [
+      "1077 BURTONWOOD AVE",
+      "322010-163778"
+     ],
+     [
+      "1084 WINDSOR DR",
+      "322010-137343"
+     ],
+     [
+      "1089 BURTONWOOD AVE",
+      "222013-142453"
+     ],
+     [
+      "1094 WINDSOR DR",
+      "322010-137435"
+     ],
+     [
+      "1095 BURTONWOOD AVE",
+      "322010-125907"
+     ]
+    ]
+   }
+  },
+  {
+   "frame": 1,
+   "pole": "4904169E",
+   "profiles": [
+    {
+     "L": "L/NW",
+     "side": "R",
+     "items": [
+      {
+       "t": "pri",
+       "h": "36'6\"",
+       "c": [
+        "IN: 4/C 336ATW 16KV"
+       ],
+       "k": "L"
+      },
+      {
+       "t": "xl",
+       "h": "30'6\"",
+       "c": [
+        "1/0AT 120V"
+       ]
+      },
+      {
+       "t": "sg",
+       "h": "30'",
+       "c": [
+        "IN: 9/32\" SG"
+       ],
+       "k": "R"
+      },
+      {
+       "t": "xb",
+       "h": "21'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "19'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "18'",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 2018, INSP. N/A",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-HIGH FIRE AREA TIER 3",
+    "-FOOT ACCESS R/O 1089 BURTONWOOD AVE"
+   ],
+   "gps": [
+    "34\u00b011'33.43\"",
+    "118\u00b051'57.24\""
+   ],
+   "elev": "817"
+  },
+  {
+   "frame": 2,
+   "pole": "4882167E",
+   "profiles": [
+    {
+     "L": "L/NW",
+     "side": "R",
+     "items": [
+      {
+       "t": "pri",
+       "h": "37'",
+       "c": [
+        "IN: 4/C 336ATW 16KV"
+       ],
+       "k": "B"
+      },
+      {
+       "t": "fhla",
+       "h": "34'",
+       "c": [
+        "IN: 2-F/H'S & L/A'S"
+       ],
+       "k": "R"
+      },
+      {
+       "t": "xfmr",
+       "h": "31'",
+       "c": [
+        "IN: 37.5KVA XFMR"
+       ],
+       "k": "R"
+      },
+      {
+       "t": "xr",
+       "h": "28'",
+       "c": [
+        "1/0AT"
+       ]
+      },
+      {
+       "t": "sg",
+       "h": "27'6\"",
+       "c": [
+        "9/32\" SG"
+       ],
+       "k": "L"
+      },
+      {
+       "t": "xb",
+       "h": "22'5\"",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "21'5\"",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "20'2\"",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 2018, INSP. N/A",
+    "-NO IPI REQUIRED",
+    "-TC REQUIRED",
+    "-PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-TRUCK ACCESS VIA STREET NAME",
+    "-HIGH FIRE AREA TIER 3"
+   ],
+   "gps": [
+    "34\u00b011'34.61\"",
+    "118\u00b051'56.27\""
+   ],
+   "elev": "817",
+   "tlm": {
+    "ex": [
+     "25",
+     "29.2",
+     "4",
+     "116.8"
+    ],
+    "pr": [
+     "37.5",
+     "29.2",
+     "4",
+     "77.8"
+    ],
+    "cz": "5",
+    "pc": "HAMPSHIRE",
+    "addr": [
+     [
+      "1105 BURTONWOOD AVE",
+      "322010-126589"
+     ],
+     [
+      "1117 BURTONWOOD AVE",
+      "322010-125920"
+     ],
+     [
+      "1128 WINDSOR DR",
+      "322010-396417"
+     ],
+     [
+      "1108 WINDSOR DR",
+      "322010-210101"
+     ]
+    ]
+   }
+  },
+  {
+   "frame": 3,
+   "pole": "4860421E",
+   "profiles": [
+    {
+     "L": "L/NE",
+     "side": "L",
+     "gside": 1,
+     "items": [
+      {
+       "t": "armc",
+       "h": "41'6\"",
+       "c": [
+        "IN: 4/C 336ATW 16KV"
+       ]
+      },
+      {
+       "t": "de2",
+       "h": "37'6\"",
+       "c": [
+        "IN: 4/C 336ATW 16KV (SLACK)",
+        "3/C 336ATW 16KV (SLACK)"
+       ],
+       "k": "C"
+      },
+      {
+       "t": "dot",
+       "h": "31'6\"",
+       "c": [
+        "IN: 1/0AT 120V (N)",
+        "1/0AT 120V (S)"
+       ]
+      },
+      {
+       "t": "xb",
+       "h": "23'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "22'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "21'",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ],
+     "anchors": [
+      {
+       "L": "13'",
+       "c": "IN: 1 1/4\" 3EYE"
+      },
+      {
+       "L": "7'"
+      }
+     ],
+     "guys": [
+      {
+       "h": "37'",
+       "an": 0,
+       "c": "IN: 3/8\" DG @ 37'"
+      },
+      {
+       "h": "36'",
+       "an": 0,
+       "c": "IN: 3/8\" DG @ 36'"
+      },
+      {
+       "h": "23'",
+       "an": 1,
+       "c": "EX: 5/16\" DG @ 23'"
+      }
+     ]
+    },
+    {
+     "L": "L/NW",
+     "side": "L",
+     "gside": 1,
+     "items": [
+      {
+       "t": "de2",
+       "h": "41'6\"",
+       "c": [
+        "IN: 4/C 336ATW 16KV"
+       ],
+       "k": "C"
+      },
+      {
+       "t": "armc",
+       "h": "37'6\"",
+       "c": [
+        "IN: 4/C 336ATW 16KV (SLACK)",
+        "3/C 336ATW 16KV (SLACK)"
+       ]
+      },
+      {
+       "t": "xb",
+       "h": "31'6\"",
+       "c": [
+        "IN: 1/0AT 120V (N)",
+        "1/0AT 120V (S)"
+       ]
+      },
+      {
+       "t": "xl",
+       "h": "23'",
+       "c": [
+        "COMM"
+       ]
+      },
+      {
+       "t": "xb",
+       "h": "22'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "21'",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ],
+     "anchors": [
+      {
+       "L": "39'",
+       "c": "EX: 1\" 3EYE"
+      },
+      {
+       "L": "17'6\""
+      }
+     ],
+     "guys": [
+      {
+       "h": "41'",
+       "an": 0,
+       "c": "IN: 3/8\" DG @ 41'"
+      },
+      {
+       "h": "40'",
+       "an": 0,
+       "c": "IN: 3/8\" DG @ 40'"
+      },
+      {
+       "h": "22'",
+       "an": 1,
+       "c": "EX: 5/16\" DG @ 22'"
+      },
+      {
+       "h": "21'",
+       "an": 1,
+       "c": "EX: 1/4\" DG @ 21'"
+      }
+     ]
+    }
+   ],
+   "crew": [
+    "-CREW TO INSTALL WEDGE COVERS PER DOH DC-535.1 WHEN APPLICABLE"
+   ],
+   "notes": [
+    "-POLE SET IN 2018, INSP. N/A",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-FOOT ACCESS R/O 1117 BURTONWOOD AVE",
+    "-E TO RELINQUISH DIRECTION ANCHOR AT 13' TO COMM/CATV",
+    "-HIGH FIRE AREA TIER 3",
+    "-JOINT MEET CONSTRUCTION",
+    "-INSTALLING COMM ANCHOR @ 7' TO AVOID EASEMENT"
+   ],
+   "gps": [
+    "34\u00b011'35.35\"",
+    "118\u00b051'55.68\""
+   ],
+   "elev": "813"
+  },
+  {
+   "frame": 4,
+   "pole": "1414711E",
+   "profiles": [
+    {
+     "L": "L/NW",
+     "side": "R",
+     "items": [
+      {
+       "t": "pri",
+       "h": "36'",
+       "c": [
+        "IN: 2/C 1/0ATW 16KV"
+       ],
+       "k": "L",
+       "fhla": true,
+       "above": [
+        "2-F/H'S",
+        "IN: 2-L/A'S"
+       ]
+      },
+      {
+       "t": "xfmr",
+       "h": "33'",
+       "c": [
+        "50KVA XFMR"
+       ],
+       "k": "L"
+      },
+      {
+       "t": "xb",
+       "h": "30'",
+       "c": [
+        "IN: 1/0AT 120V"
+       ]
+      },
+      {
+       "t": "xb",
+       "h": "19'1\"",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "18'2\"",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 2019, INSP. N/A",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-FOOT ACCESS R/O 1135 BURTONWOOD AVE",
+    "-HIGH FIRE AREA TIER 3"
+   ],
+   "gps": [
+    "34\u00b011'36.64\"",
+    "118\u00b051'54.65\""
+   ],
+   "elev": "813",
+   "tlm": {
+    "ex": [
+     "50",
+     "29.18",
+     "8",
+     "58"
+    ],
+    "pr": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "cz": "5",
+    "pc": "HAMPSHIRE 16KV",
+    "addr": [
+     [
+      "1129 BURTONWOOD AVE",
+      "322010-127286"
+     ],
+     [
+      "1135 BURTONWOOD AVE",
+      "322010-127284"
+     ],
+     [
+      "1142 WINDSOR DR",
+      "322010-208916"
+     ],
+     [
+      "1147 BURTONWOOD AVE",
+      "322010-127234"
+     ],
+     [
+      "1158 WINDSOR DR",
+      "322010-210101"
+     ],
+     [
+      "1159 BURTONWOOD AVE",
+      "322010-164788"
+     ],
+     [
+      "1174 WINDSOR DR",
+      "322010-209088"
+     ],
+     [
+      "1190 WINDSOR DR",
+      "322010-209225"
+     ]
+    ]
+   }
+  },
+  {
+   "frame": 5,
+   "pole": "1414712E",
+   "profiles": [
+    {
+     "L": "L/NW",
+     "side": "R",
+     "items": [
+      {
+       "t": "pri",
+       "h": "37'",
+       "c": [
+        "IN: 2/C 1/0ATW 16KV"
+       ],
+       "k": "R"
+      },
+      {
+       "t": "xb",
+       "h": "31'",
+       "c": [
+        "IN: 1/0AT 120V"
+       ]
+      },
+      {
+       "t": "xb",
+       "h": "21'5\"",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "20'5\"",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 1962, INSP. N/A",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-FOOT ACCESS R/O 1159 BURTONWOOD AVE",
+    "-TREE TRIMMING REQUIRED",
+    "-HIGH FIRE AREA TIER 3",
+    "-POLE BEING REPLACED DUE TO RECONDUCTOR",
+    "-CRANE SET REQUIRED",
+    "-SAME HOLE SET DUE TO RISER"
+   ],
+   "gps": [
+    "34\u00b011'38.01\"",
+    "118\u00b051'53.56\""
+   ],
+   "elev": "810"
+  },
+  {
+   "frame": 6,
+   "pole": "1444115E",
+   "profiles": [
+    {
+     "L": "L/NW",
+     "side": "R",
+     "items": [
+      {
+       "t": "pri",
+       "h": "32'6\"",
+       "c": [
+        "IN: 2/C 1/0ATW 16KV"
+       ],
+       "k": "R"
+      },
+      {
+       "t": "xb",
+       "h": "26'6\"",
+       "c": [
+        "IN: 1/0AT 120V"
+       ]
+      },
+      {
+       "t": "xb",
+       "h": "19'2\"",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "18'",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 1962, INSP. 2017",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-FOOT ACCESS R/O 1177 BURTONWOOD AVE",
+    "-HIGH FIRE AREA TIER 3"
+   ],
+   "gps": [
+    "34\u00b011'39.31\"",
+    "118\u00b051'52.59\""
+   ],
+   "elev": "810"
+  },
+  {
+   "frame": 7,
+   "pole": "1444116E",
+   "profiles": [
+    {
+     "L": "L/NE",
+     "side": "R",
+     "items": [
+      {
+       "t": "arm2",
+       "h": "37'",
+       "c": [
+        "IN: 2/C 1/0ATW 16KV"
+       ]
+      },
+      {
+       "t": "fhlaf",
+       "h": "34'",
+       "c": [
+        "IN: 2-F/H'S & L/A'S"
+       ]
+      },
+      {
+       "t": "xfmr",
+       "h": "31'",
+       "c": [
+        "IN: 50KVA XFMR"
+       ],
+       "k": "C"
+      },
+      {
+       "t": "dot",
+       "h": "28'",
+       "c": [
+        "1/0AT 120V"
+       ]
+      },
+      {
+       "t": "dot",
+       "h": "19'",
+       "c": [
+        "COMM"
+       ]
+      },
+      {
+       "t": "dot",
+       "h": "18'",
+       "c": [
+        "CATV"
+       ]
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 1962, INSP. 2017",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-FOOT ACCESS R/O 1177 BURTONWOOD AVE",
+    "-HIGH FIRE AREA TIER 3",
+    "-POLE BEING REPLACED DUE TO RECONDUCTOR",
+    "-VEGETATION REMOVAL REQUIRED",
+    "-SAME HOLE SET DUE TO LOCATION",
+    "-CRANE SET REQUIRED"
+   ],
+   "gps": [
+    "34\u00b011'40.63\"",
+    "118\u00b051'51.47\""
+   ],
+   "elev": "816",
+   "tlm": {
+    "ex": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "pr": [
+     "50",
+     "41.79",
+     "8",
+     "84"
+    ],
+    "cz": "5",
+    "pc": "HAMPSHIRE 16KV",
+    "addr": [
+     [
+      "1167 BURTONWOOD AVE",
+      ""
+     ],
+     [
+      "1177 BURTONWOOD AVE",
+      ""
+     ],
+     [
+      "1185 BURTONWOOD AVE",
+      ""
+     ],
+     [
+      "1195 BURTONWOOD AVE",
+      ""
+     ],
+     [
+      "1208 WINDSOR DR",
+      ""
+     ],
+     [
+      "1224 WINDSOR DR",
+      ""
+     ],
+     [
+      "1242 WINDSOR DR",
+      ""
+     ],
+     [
+      "1258 WINDSOR DR",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "frame": 8,
+   "pole": "4758996E",
+   "profiles": [
+    {
+     "L": "L/NE",
+     "side": "R",
+     "items": [
+      {
+       "t": "arm2fl",
+       "h": "36'6\"",
+       "c": [
+        "IN: 2/C 1/0ATW 16KV",
+        "2-F/H'S",
+        "IN: 2-L/A'S"
+       ]
+      },
+      {
+       "t": "xfmr",
+       "h": "33'6\"",
+       "c": [
+        "50KVA XFMR"
+       ],
+       "k": "C"
+      },
+      {
+       "t": "dot",
+       "h": "30'6\"",
+       "c": [
+        "IN: 1/0AT 120V (NE)"
+       ]
+      },
+      {
+       "t": "dot",
+       "h": "22'3\"",
+       "c": [
+        "COMM"
+       ]
+      },
+      {
+       "t": "dot",
+       "h": "21'3\"",
+       "c": [
+        "CATV"
+       ]
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 2007, INSP. 2017",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-FOOT ACCESS R/O 1219 BURTONWOOD AVE",
+    "-HIGH FIRE AREA TIER 3",
+    "-POLE BEING REPLACED DUE TO RECONDUCTOR",
+    "-VEGETATION REMOVAL REQUIRED",
+    "-SAME HOLE SET DUE TO LOCATION",
+    "-CRANE SET REQUIRED"
+   ],
+   "gps": [
+    "34\u00b011'41.99\"",
+    "118\u00b051'50.38\""
+   ],
+   "elev": "819",
+   "tlm": {
+    "ex": [
+     "50",
+     "64.26",
+     "16",
+     "129"
+    ],
+    "pr": [
+     "50",
+     "53.18",
+     "8",
+     "66"
+    ],
+    "cz": "5",
+    "pc": "HAMPSHIRE 16KV",
+    "addr": [
+     [
+      "1207 BURTONWOOD AVE",
+      "322010-126570"
+     ],
+     [
+      "1219 BURTONWOOD AVE",
+      "322010-126577"
+     ],
+     [
+      "1231 BURTONWOOD AVE",
+      "322010-126068"
+     ],
+     [
+      "1243 BURTONWOOD AVE",
+      "322010-165389"
+     ],
+     [
+      "1274 WINDSOR DR",
+      "322010-235693"
+     ],
+     [
+      "1290 WINDSOR DR",
+      "322010-235661"
+     ],
+     [
+      "1306 WINDSOR DR",
+      "222014-046720"
+     ],
+     [
+      "1318 WINDSOR DR",
+      "322010-227388"
+     ]
+    ]
+   }
+  },
+  {
+   "frame": 9,
+   "pole": "1444118E",
+   "profiles": [
+    {
+     "L": "L/NW",
+     "side": "L",
+     "gside": 1,
+     "items": [
+      {
+       "t": "de1",
+       "h": "31'6\"",
+       "c": [
+        "IN: 2/C 1/0ATW 16KV"
+       ],
+       "k": "L"
+      },
+      {
+       "t": "xl",
+       "h": "25'6\"",
+       "c": [
+        "IN: 1/0AT 120V"
+       ]
+      },
+      {
+       "t": "xl",
+       "h": "19'",
+       "c": [
+        "COMM"
+       ]
+      },
+      {
+       "t": "xl",
+       "h": "18'",
+       "c": [
+        "CATV"
+       ]
+      }
+     ],
+     "anchors": [
+      {
+       "L": "26'",
+       "c": "EX: 1\" 3EYE"
+      },
+      {
+       "L": "20'",
+       "c": "IN: 1 1/4\" 3EYE"
+      }
+     ],
+     "guys": [
+      {
+       "h": "31'",
+       "an": 0,
+       "c": "IN: 9/32\" DG @ 31'"
+      },
+      {
+       "h": "25'",
+       "an": 0,
+       "c": "IN: 9/32\" DG @ 25'"
+      },
+      {
+       "h": "19'",
+       "an": 1,
+       "c": "EX: COMM DG @ 19'"
+      },
+      {
+       "h": "18'",
+       "an": 1,
+       "c": "EX: CATV DG @ 18'"
+      }
+     ]
+    }
+   ],
+   "crew": [
+    "-CREW TO INSTALL WEDGE COVERS PER DOH DC-535.1 WHEN APPLICABLE"
+   ],
+   "notes": [
+    "-POLE SET IN 1962, INSP. 2017",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-FOOT ACCESS R/O 1243 BURTONWOOD AVE",
+    "-INSTALLING COMM ANCHOR @ 20' TO AVOID EASEMENT",
+    "-HIGH FIRE AREA TIER 3",
+    "-JOINT MEET CONSTRUCTION"
+   ],
+   "gps": [
+    "34\u00b011'43.28\"",
+    "118\u00b051'49.33\""
+   ],
+   "elev": "819"
+  },
+  {
+   "frame": 10,
+   "pole": "5815475E",
+   "profiles": [
+    {
+     "L": "L/NE",
+     "side": "R",
+     "items": [
+      {
+       "t": "armc",
+       "h": "37'",
+       "c": [
+        "IN: 4/C 336ATW 16KV"
+       ]
+      },
+      {
+       "t": "de1",
+       "h": "34'",
+       "c": [
+        "IN: 4/C 336ATW 16KV (SLACK)",
+        "2-3/8\" SG"
+       ],
+       "k": "R"
+      },
+      {
+       "t": "sg",
+       "h": "34'",
+       "c": [],
+       "k": "L",
+       "share": 1
+      },
+      {
+       "t": "dot",
+       "h": "24'",
+       "c": [
+        "COMM"
+       ]
+      },
+      {
+       "t": "xb",
+       "h": "23'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "22'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xb",
+       "h": "20'6\"",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ]
+    },
+    {
+     "L": "L/NW",
+     "side": "R",
+     "gside": -1,
+     "items": [
+      {
+       "t": "de1",
+       "h": "37'",
+       "c": [
+        "IN: 4/C 336ATW 16KV"
+       ],
+       "k": "R"
+      },
+      {
+       "t": "armc",
+       "h": "34'",
+       "c": [
+        "IN: 4/C 336ATW 16KV (SLACK)"
+       ]
+      },
+      {
+       "t": "xr",
+       "h": "24'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xr",
+       "h": "23'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xr",
+       "h": "22'",
+       "c": [
+        "COMM"
+       ],
+       "dot": true
+      },
+      {
+       "t": "xr",
+       "h": "20'6\"",
+       "c": [
+        "CATV"
+       ],
+       "dot": true
+      }
+     ],
+     "anchors": [
+      {
+       "L": "32'",
+       "c": "EX: 1\" 3EYE"
+      },
+      {
+       "L": "26'4\"",
+       "c": "EX: COMM ANCHOR"
+      }
+     ],
+     "guys": [
+      {
+       "h": "36'6\"",
+       "an": 0,
+       "c": "IN: 7/16\" DG @ 36'6\""
+      },
+      {
+       "h": "35'6\"",
+       "an": 0,
+       "c": "IN: 3/8\" DG @ 35'6\""
+      },
+      {
+       "h": "23'",
+       "an": 1,
+       "c": "EX: COMM DG @ 23'"
+      },
+      {
+       "h": "22'",
+       "an": 1,
+       "c": "EX: COMM DG @ 22'"
+      },
+      {
+       "h": "20'6\"",
+       "an": 1,
+       "c": "EX: CATV DG @ 20'6\""
+      }
+     ]
+    }
+   ],
+   "crew": [
+    "-CREW TO INSTALL WEDGE COVERS PER DOH DC-535.1 WHEN APPLICABLE"
+   ],
+   "notes": [
+    "-POLE SET IN 1962, INSP. N/A",
+    "-NO IPI REQUIRED",
+    "-TC REQUIRED",
+    "-PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-TRUCK ACCESS VIA STREET NAME",
+    "-POLE BEING REPLACED DUE TO RECONDUCTOR",
+    "-HIGH FIRE AREA TIER 3",
+    "-JOINT MEET CONSTRUCTION",
+    "-SAME HOLE SET DUE TO LOCATION"
+   ],
+   "gps": [
+    "34\u00b011'36.01\"",
+    "118\u00b051'56.98\""
+   ],
+   "elev": "814"
+  },
+  {
+   "frame": 11,
+   "pole": "1444101E",
+   "profiles": [
+    {
+     "L": "L/NE",
+     "side": "R",
+     "items": [
+      {
+       "t": "arm4",
+       "h": "37'",
+       "c": [
+        "IN: 4/C 336ATW 16KV"
+       ]
+      },
+      {
+       "t": "dot",
+       "h": "23'8\"",
+       "c": [
+        "COMM"
+       ]
+      },
+      {
+       "t": "dot",
+       "h": "22'10\"",
+       "c": [
+        "COMM"
+       ]
+      },
+      {
+       "t": "dot",
+       "h": "21'6\"",
+       "c": [
+        "COMM"
+       ]
+      },
+      {
+       "t": "dot",
+       "h": "20'5\"",
+       "c": [
+        "CATV"
+       ]
+      }
+     ]
+    }
+   ],
+   "crew": [],
+   "notes": [
+    "-POLE SET IN 2017, INSP. N/A",
+    "-NO IPI REQUIRED",
+    "-NO TC REQUIRED",
+    "-NO PTC REQUIRED",
+    "-EAGLE ZONE",
+    "-TRUCK ACCESS VIA WINDSOR DR",
+    "-HIGH FIRE AREA TIER 3"
+   ],
+   "gps": [
+    "34\u00b011'37.32\"",
+    "118\u00b051'55.92\""
+   ],
+   "elev": "813"
+  }
+ ]
+}

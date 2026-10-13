@@ -1,0 +1,73 @@
+# Pole head generator
+
+Builds pole head detail sheets in the AUD OH template from a job spec, as one
+`civil3d_entity` `apply` job. Copies and the edits that fill them are tied
+together with refs (`"g12:37BBC7"` = the copy of `37BBC7` made by copy `g12`),
+so a whole job is one approval and one tool call.
+
+```
+python polehead.py examples/TD2536120.json -o job_TD2536120.json
+python polehead.py spec.json --poles 1414703E,4904169E -o job_part.json
+python station_builder.py "<TD> - STATION BUILDER.xlsx" 1414703E 4904169E > sheets.json
+```
+
+Then put the job file in the job folder on the drafting machine and run:
+
+```
+civil3d_request_approval  toolName=civil3d_entity action=apply parameters={"action":"apply","jobFile":"C:\\...\\job_TD2536120.json"}
+civil3d_entity            action=apply jobFile=<same path> approvalToken=<token>
+```
+
+The old-to-new handle map lands next to the job as `job_TD2536120.result.json`
+for the measure-and-fix pass.
+
+## Spec format
+
+```json
+{
+  "job": "TD2536120",
+  "poles": [{
+    "frame": 0,
+    "pole": "1414703E",
+    "profiles": [{
+      "L": "L/NW", "side": "R", "gside": 1,
+      "items": [{"t": "pri", "h": "41'6\"", "c": ["IN: 4/C 336ATW 16KV"], "k": "L"}],
+      "anchors": [{"L": "13'", "c": "IN: 1 1/4\" 3EYE"}],
+      "guys": [{"h": "37'", "an": 0, "c": "IN: 3/8\" DG @ 37'"}]
+    }],
+    "crew": ["-..."], "notes": ["-..."], "gps": ["34°11'32.19\"", "118°.."], "elev": "821",
+    "tlm": {"ex": ["50", "31.57", "8", "63"], "pr": ["", "", "", ""], "cz": "5",
+            "pc": "HAMPSHIRE 16KV", "vd": "", "flicker": "", "addr": [["1065 BURTONWOOD AVE", "322010-238159"]]}
+  }]
+}
+```
+
+- `frame` 0 to 11, left to right, top row first. One profile is drawn at Cx - 300, two at Cx -/+ 300 (PDF left, then right).
+- `side`: callout and dim side, `R` or `L`. `gside`: guys and anchors side, `1` right, `-1` left (needed when there are anchors).
+- Item `h`: true height as written. `c`: callout lines at the row. `above`: extra lines stacked above the row's own line (FH/LA on a primary box).
+- Item types (`t`) and `k`:
+  - `pri` side arm box with pin and X CONDs. `k`: `R`, `L` or `C` box position, `B` a box on each side. `fhla: true` puts the SA and CUTOUT on that box.
+  - `fhla` side view FH/LA box. `k: "R"` puts the box right of the pole (default left).
+  - `xfmr` side transformer, `k` `L`/`C`/`R`.
+  - `xr`, `xl`, `xb` X COND right, left, both. COMM and CATV lines are always X CONDs; add `dot: true` to keep the SEC-MISC dot under them.
+  - `dot` SEC-MISC dot alone (a bare dot with no line).
+  - `sg` span guy half, `k` `R` or `L` (never mirrored or edited). `share: 1` puts it on the row of the other item at that whole foot.
+  - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm. `arm2fl` 2/C arm with FH and LA.
+  - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways.
+  - `o`: tie-break order for two items at the same height.
+- `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed.
+
+## Rules built in
+
+Height scale and cluster step-up, dim tight fit (1.92 gap, 4.4 beside an
+arrowhead), horizontal dim labels stepped up 8 until clear of other labels and
+callout text, X CONDs starting at the pin, span guy halves 2E3466 / 2E3954,
+anchor scale from the shortest lead, DG stacking and lift, pole label by guy
+side, CREW/NOTE/GPS/ELEV stack, ELEV as a bare number, TLM street-only
+addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
+
+## Not generated
+
+DE CALC boxes, TLM NOTE boxes and slanted pins are still drafted by hand.
+Note box widths and DG leader ends use text width estimates: measure them after
+the job and fix them in one edit batch.

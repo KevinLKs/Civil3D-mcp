@@ -29,6 +29,7 @@ const ApprovalResponseSchema = z.object({
   approvalToken: z.string(),
   expiresAt: z.string(),
   drawingFingerprint: z.string(),
+  jobFileSha256: z.string().optional(),
   instruction: z.string(),
 });
 
@@ -120,7 +121,9 @@ export function registerApprovalTool(server: McpServer) {
         toolName: args.toolName,
         action: args.action,
         ...receipt,
-        instruction: "Retry the approved tool call with approvalToken and the identical parameters.",
+        instruction: receipt.jobFileSha256
+          ? "Retry the approved tool call with approvalToken and the identical parameters. Do not change the job file; any edit voids the token."
+          : "Retry the approved tool call with approvalToken and the identical parameters.",
       });
     } catch (error) {
       return errorResult("civil3d_request_approval", error);

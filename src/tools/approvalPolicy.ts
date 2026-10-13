@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { withApplicationConnection } from "../utils/ConnectionManager.js";
 import type { ToolCapability } from "./toolMetadata.js";
+import { jobFileDigest } from "./domains/entityJob.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -24,6 +25,8 @@ export interface ApprovalReceipt {
   approvalToken: string;
   expiresAt: string;
   drawingFingerprint: string;
+  /** SHA-256 of the referenced job file, when the parameters name one. */
+  jobFileSha256?: string;
 }
 
 export class ApprovalRequiredError extends Error {}
@@ -60,10 +63,28 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function hashParameters(parameters: JsonObject): string {
-  const normalized = { ...parameters };
+/**
+ * Hashes the approval-relevant parameters. When the parameters name a job file
+ * (jobFile), the file's content hash is bound in as well, so the token is tied
+ * to exactly the file that was approved rather than only to its path.
+ */
+function hashParameters(parameters: JsonObject, jobFileSha256?: string): string {
+  const normalized: JsonObject = { ...parameters };
   delete normalized.approvalToken;
+  if (jobFileSha256 !== undefined) {
+    normalized["$jobFileSha256"] = jobFileSha256;
+  }
   return createHash("sha256").update(stableJson(normalized)).digest("hex");
+}
+
+function readJobDigest(parameters: JsonObject): string | undefined {
+  try {
+    return jobFileDigest(parameters);
+  } catch (error) {
+    throw new ApprovalValidationError(
+      `Could not read jobFile for approval: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 export function isApprovalRequired(target: ApprovalTarget): boolean {
@@ -127,13 +148,14 @@ export class ApprovalPolicyService {
       );
     }
 
+    const jobFileSha256 = readJobDigest(parameters);
     const drawingFingerprint = await this.fingerprintFor(target);
     const expiresAt = this.now() + ttlMs;
     const approvalToken = randomUUID();
     this.grants.set(approvalToken, {
       toolName: target.toolName,
       action: target.action,
-      parametersHash: hashParameters(parameters),
+      parametersHash: hashParameters(parameters, jobFileSha256),
       drawingFingerprint,
       expiresAt,
     });
@@ -142,6 +164,7 @@ export class ApprovalPolicyService {
       approvalToken,
       expiresAt: new Date(expiresAt).toISOString(),
       drawingFingerprint,
+      ...(jobFileSha256 !== undefined ? { jobFileSha256 } : {}),
     };
   }
 
@@ -169,12 +192,16 @@ export class ApprovalPolicyService {
       throw new ApprovalValidationError("Approval token has expired. Request a new approval.");
     }
 
-    if (
-      grant.toolName !== target.toolName ||
-      grant.action !== target.action ||
-      grant.parametersHash !== hashParameters(parameters)
-    ) {
+    if (grant.toolName !== target.toolName || grant.action !== target.action) {
       throw new ApprovalValidationError("Approval token does not match this tool action and its parameters.");
+    }
+
+    if (grant.parametersHash !== hashParameters(parameters, readJobDigest(parameters))) {
+      throw new ApprovalValidationError(
+        typeof parameters.jobFile === "string"
+          ? "Approval token does not match these parameters or the job file changed after approval."
+          : "Approval token does not match this tool action and its parameters.",
+      );
     }
 
     const activeDrawingFingerprint = await this.fingerprintFor(target);

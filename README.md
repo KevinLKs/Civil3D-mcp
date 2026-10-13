@@ -884,7 +884,7 @@ one or more operations; alias rows show an em dash in the **Operations** column.
 
 | Tool | Description |
 | --- | --- |
-| `civil3d_entity` | Template-driven drafting on ordinary AutoCAD entities in model space or any layout. `query` lists entities in a window (handles, block names, attribute values, text, multileader text, line and polyline geometry). `copy` batch copies or moves selections by handles and/or window with a dx/dy offset and returns old-to-new handle maps. `edit` batch sets text, MText, multileader text, attribute values, dynamic block properties (visibility states, distances), rotation, line endpoints and layers. `erase` deletes by handle. |
+| `civil3d_entity` | Template-driven drafting on ordinary AutoCAD entities in model space or any layout. `query` lists entities in a window (handles, block names, attribute values, text, multileader text, line and polyline geometry). `copy` batch copies or moves selections by handles and/or window with a dx/dy offset and returns old-to-new handle maps. `edit` batch sets text, MText, multileader text, attribute values, dynamic block properties (visibility states, distances), rotation, line endpoints and layers. `erase` deletes by handle. `apply` runs a whole job from a JSON file (`jobFile`, absolute path): copies first, then edits and erases that can name the new copies as `"<copyId>:<sourceHandle>"`. Approval is bound to the file's SHA-256, so the approval request stays tiny and any change to the file voids the token. The full old-to-new handle map is written beside the job as `<name>.result.json`. `tools/polehead` emits this format. |
 
 </details>
 
