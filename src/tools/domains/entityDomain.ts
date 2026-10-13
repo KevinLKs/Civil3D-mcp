@@ -25,6 +25,7 @@ const CopyOperationSchema = z.object({
   dy: z.number().describe("Y displacement."),
   space: SpaceSchema.optional().describe("Space the source entities live in."),
   targetSpace: SpaceSchema.optional().describe("Copy only: place copies in this space instead of the source space."),
+  mirrorX: z.number().optional().describe("After the offset, mirror across the vertical line x = mirrorX. Text stays readable (justification flips, like MIRRTEXT 0)."),
 });
 
 const EditSchema = z.object({
@@ -33,6 +34,9 @@ const EditSchema = z.object({
   attributes: z.record(z.string(), z.string()).optional().describe("Block attribute values by tag."),
   start: Point2DSchema.optional().describe("New start point (lines only)."),
   end: Point2DSchema.optional().describe("New end point (lines only)."),
+  vertices: z.array(Point2DSchema).min(2).optional().describe("Replace all vertices of a line, polyline or leader."),
+  colorIndex: z.number().int().min(0).max(256).optional().describe("ACI color: 0 = ByBlock, 256 = ByLayer."),
+  linetype: z.string().optional().describe("Linetype name; must already be loaded in the drawing."),
   layer: z.string().optional(),
 });
 
@@ -107,8 +111,8 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
       description:
         "Reads, copies, moves, edits and erases ordinary AutoCAD entities (blocks, lines, polylines, text, MText, multileaders, attributes) in model space or a layout. " +
         "query: list entities in a window with handles, block names, attribute values, text and geometry. " +
-        "copy: batch copy or move entities by handles and/or window with a dx/dy offset; returns old-to-new handle maps. " +
-        "edit: batch change text, attribute values, line endpoints or layer by handle. " +
+        "copy: batch copy or move entities by handles and/or window with a dx/dy offset and optional mirror; returns old-to-new handle maps. " +
+        "edit: batch change text, attribute values, vertices/endpoints, color, linetype or layer by handle. " +
         "erase: delete entities by handle. Batch copy and edit work so one approval covers a whole detail.",
       inputShape: {
         action: z.enum(["query", "copy", "edit", "erase"]),
