@@ -1018,6 +1018,10 @@ public static class EntityCommands
     switch (entity)
     {
       case RotatedDimension rotated:
+        // A user-placed text position pins the dimension line to the text
+        // (DIMTMOVE 0), which makes dimLine edits no-ops and stretches the
+        // dimension back to the old text spot. Reset to the default position.
+        rotated.UsingDefaultTextPosition = true;
         if (xLine1 is { } a) rotated.XLine1Point = To3d(a, rotated.XLine1Point);
         if (xLine2 is { } b) rotated.XLine2Point = To3d(b, rotated.XLine2Point);
         if (dimLine is { } c) rotated.DimLinePoint = To3d(c, rotated.DimLinePoint);
@@ -1025,6 +1029,7 @@ public static class EntityCommands
         break;
 
       case AlignedDimension aligned:
+        aligned.UsingDefaultTextPosition = true;
         if (xLine1 is { } d) aligned.XLine1Point = To3d(d, aligned.XLine1Point);
         if (xLine2 is { } e) aligned.XLine2Point = To3d(e, aligned.XLine2Point);
         if (dimLine is { } f) aligned.DimLinePoint = To3d(f, aligned.DimLinePoint);
