@@ -32,6 +32,7 @@ const EditSchema = z.object({
   handle: HandleSchema,
   text: z.string().optional().describe("New text for TEXT, MTEXT (raw contents), MULTILEADER, ATTRIB, or dimension override."),
   attributes: z.record(z.string(), z.string()).optional().describe("Block attribute values by tag."),
+  rotationDeg: z.number().optional().describe("Absolute rotation in degrees counterclockwise about the insertion point (block references, text, MText)."),
   dynamicProperties: z.record(z.string(), z.union([z.string(), z.number()])).optional().describe("Dynamic block properties by name, e.g. {\"Custom\": \"ADDRESS LIST 8\"} for a visibility state or a number for a distance. Names and current values are reported by query; applied before attributes."),
   start: Point2DSchema.optional().describe("New start point (lines only)."),
   end: Point2DSchema.optional().describe("New end point (lines only)."),

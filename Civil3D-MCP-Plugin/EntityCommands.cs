@@ -297,6 +297,29 @@ public static class EntityCommands
           changed.Add("vertices");
         }
 
+        // Rotation about the entity's own insertion point, in degrees CCW.
+        var rotationDeg = edit["rotationDeg"]?.GetValue<double>();
+        if (rotationDeg != null)
+        {
+          var radians = rotationDeg.Value * Math.PI / 180.0;
+          switch (entity)
+          {
+            case BlockReference rotatedBlock:
+              rotatedBlock.Rotation = radians;
+              break;
+            case DBText rotatedText:
+              rotatedText.Rotation = radians;
+              break;
+            case MText rotatedMText:
+              rotatedMText.Rotation = radians;
+              break;
+            default:
+              throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: rotationDeg can only be set on block references, text and MText.");
+          }
+
+          changed.Add("rotationDeg");
+        }
+
         var colorIndex = edit["colorIndex"]?.GetValue<int>();
         if (colorIndex != null)
         {
