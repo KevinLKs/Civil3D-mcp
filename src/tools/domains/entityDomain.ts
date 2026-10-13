@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { withApplicationConnection } from "../../utils/ConnectionManager.js";
 import type { DomainToolDefinition } from "../domainRuntime.js";
+import { parseJob, readJobFile, runEntityJob, validateJob, writeJobResult } from "./entityJob.js";
 
 const GenericResponseSchema = z.object({}).passthrough();
 
@@ -59,6 +60,19 @@ const QueryArgs = z.object({
 const CopyArgs = z.object({ action: z.literal("copy"), operations: z.array(CopyOperationSchema).min(1) });
 const EditArgs = z.object({ action: z.literal("edit"), edits: z.array(EditSchema).min(1) });
 const EraseArgs = z.object({ action: z.literal("erase"), handles: z.array(HandleSchema).min(1) });
+const ApplyArgs = z.object({
+  action: z.literal("apply"),
+  jobFile: z.string().min(1).optional(),
+  job: z.record(z.unknown()).optional(),
+  includeHandleMap: z.boolean().optional(),
+}).refine((args) => (args.jobFile === undefined) !== (args.job === undefined), {
+  message: "apply needs exactly one of jobFile or job.",
+});
+
+const JobFileDescription =
+  "apply: absolute path to a .json job file on this machine: {version:1, copies:[{id, handles|window, dx, dy, mirrorX?, mode?, space?}], " +
+  "edits:[{handle|ref:\"<copyId>:<sourceHandle>\", ...edit fields}], erase:[handle | {ref}]}. Approval is bound to the file's SHA-256, " +
+  "so edit the file and the token is void. The full old-to-new handle map is written beside it as <name>.result.json.";
 
 const send = (method: string, payload: Record<string, unknown>) =>
   withApplicationConnection(async (appClient) => await appClient.sendCommand(method, payload));
@@ -109,6 +123,37 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
       pluginMethods: ["eraseEntities"],
       execute: async (args) => await send("eraseEntities", { handles: (args as z.infer<typeof EraseArgs>).handles }),
     },
+    apply: {
+      action: "apply",
+      inputSchema: ApplyArgs,
+      responseSchema: GenericResponseSchema,
+      capabilities: ["create", "edit", "delete"],
+      requiresActiveDrawing: true,
+      safeForRetry: false,
+      pluginMethods: ["copyEntities", "editEntities", "eraseEntities"],
+      execute: async (args) => {
+        const { jobFile, job, includeHandleMap } = args as z.infer<typeof ApplyArgs>;
+        const file = jobFile ? readJobFile(jobFile) : undefined;
+        const parsed = file ? parseJob(file.text) : validateJob(job);
+        const result = await runEntityJob(parsed, send);
+        const resultFile = file ? writeJobResult(file.path, result, file.sha256) : undefined;
+        // Keep the reply small: per-copy counts and handle maps live in the result file.
+        const { handles, copies, ...summary } = result;
+        const response = {
+          ...summary,
+          copyOperations: Object.keys(copies).length,
+          ...(file ? { jobFile: file.path, jobSha256: file.sha256, resultFile } : {}),
+          ...(includeHandleMap || !file ? { copies, handles } : {}),
+        };
+        if (result.status === "failed") {
+          // Earlier stages are committed; report what exists so it can be fixed or erased.
+          const error = new Error(`Entity job failed at stage '${result.stage}': ${JSON.stringify(response)}`) as Error & { code: string };
+          error.code = "CIVIL3D.CONFLICT";
+          throw error;
+        }
+        return response;
+      },
+    },
   },
   exposures: [
     {
@@ -119,9 +164,11 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
         "query: list entities in a window with handles, block names, attribute values, text and geometry. " +
         "copy: batch copy or move entities by handles and/or window with a dx/dy offset and optional mirror; returns old-to-new handle maps. " +
         "edit: batch change text, attribute values, vertices/endpoints, dimension points, color, linetype or layer by handle. " +
-        "erase: delete entities by handle. Batch copy and edit work so one approval covers a whole detail.",
+        "erase: delete entities by handle. " +
+        "apply: run a whole job (copies, then edits and erases that may reference the new copies as \"<copyId>:<sourceHandle>\") from a JSON file in one call; " +
+        "approval binds to the file hash, so the request stays tiny. Batch copy and edit work so one approval covers a whole detail.",
       inputShape: {
-        action: z.enum(["query", "copy", "edit", "erase"]),
+        action: z.enum(["query", "copy", "edit", "erase", "apply"]),
         space: SpaceSchema.optional(),
         window: WindowSchema.optional(),
         crossing: z.boolean().optional(),
@@ -132,8 +179,11 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
         operations: z.array(CopyOperationSchema).optional(),
         edits: z.array(EditSchema).optional(),
         handles: z.array(HandleSchema).optional(),
+        jobFile: z.string().min(1).optional().describe(JobFileDescription),
+        job: z.record(z.unknown()).optional().describe("apply: inline job object (same format as jobFile) for small jobs."),
+        includeHandleMap: z.boolean().optional().describe("apply: also return the full old-to-new handle map inline."),
       },
-      supportedActions: ["query", "copy", "edit", "erase"],
+      supportedActions: ["query", "copy", "edit", "erase", "apply"],
       resolveAction: (rawArgs) => ({ action: String(rawArgs.action ?? ""), args: rawArgs }),
     },
   ],

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- `civil3d_entity` action `apply`: runs a copy/edit/erase job from a JSON file
+  (or an inline `job`). Edits and erases can reference the job's own copies as
+  `"<copyId>:<sourceHandle>"`, so a whole batch runs in one call. The handle map
+  is written to `<job>.result.json`.
+- Approvals for parameters that name a `jobFile` now bind to the file's SHA-256
+  (returned as `jobFileSha256`); editing the file after approval voids the token.
+- Added `tools/polehead`, the pole head detail generator that turns a job spec
+  into an `apply` job, plus a Station Builder reader.
+
 ## v1.2.1 — 2026-07-14
 
 ### Production readiness

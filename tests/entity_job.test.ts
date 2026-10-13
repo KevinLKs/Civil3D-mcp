@@ -1,0 +1,138 @@
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { ApprovalPolicyService, ApprovalValidationError } from "../src/tools/approvalPolicy.js";
+import {
+  parseJob,
+  readJobFile,
+  resultFilePath,
+  runEntityJob,
+  validateJob,
+  writeJobResult,
+} from "../src/tools/domains/entityJob.js";
+
+const applyTarget = {
+  toolName: "civil3d_entity",
+  action: "apply",
+  capabilities: ["create", "edit", "delete"] as const,
+  safeForRetry: false,
+};
+
+function tempJob(job: unknown): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "entity-job-"));
+  const file = path.join(dir, "job_1.json");
+  writeFileSync(file, JSON.stringify(job), "utf8");
+  return file;
+}
+
+function fakePlugin() {
+  const calls: Array<{ method: string; payload: Record<string, unknown> }> = [];
+  let next = 0x100;
+  const send = async (method: string, payload: Record<string, unknown>) => {
+    calls.push({ method, payload });
+    if (method === "copyEntities") {
+      const operations = payload.operations as Array<{ handles: string[] }>;
+      return {
+        operations: operations.map((operation, index) => ({
+          index,
+          handles: Object.fromEntries(operation.handles.map((handle) => [handle.toUpperCase(), (next++).toString(16).toUpperCase()])),
+        })),
+      };
+    }
+    if (method === "editEntities") return { edits: (payload.edits as unknown[]).map((_, index) => ({ index })) };
+    if (method === "eraseEntities") return { count: (payload.handles as unknown[]).length };
+    throw new Error(`unexpected ${method}`);
+  };
+  return { calls, send };
+}
+
+describe("entity jobs", () => {
+  it("copies, then resolves edit and erase refs to the new handles", async () => {
+    const job = validateJob({
+      version: 1,
+      copies: [
+        { id: "a", handles: ["2a4bc2", "2A4BC3"], dx: 10, dy: 0 },
+        { id: "b", handles: ["2A4BC2"], dx: 0, dy: -50, mirrorX: 4 },
+      ],
+      edits: [
+        { ref: "a:2A4BC2", text: "ONE" },
+        { ref: "b:2a4bc2", text: "TWO" },
+        { handle: "FFF", colorIndex: 1 },
+      ],
+      erase: ["ABC", { ref: "a:2A4BC3" }],
+    });
+    const { calls, send } = fakePlugin();
+    const result = await runEntityJob(job, send);
+
+    expect(result.status).toBe("completed");
+    expect(result.copies).toEqual({ a: 2, b: 1 });
+    expect(calls.map((call) => call.method)).toEqual(["copyEntities", "editEntities", "eraseEntities"]);
+    expect((calls[0].payload.operations as Array<Record<string, unknown>>)[1]).toEqual({ handles: ["2A4BC2"], dx: 0, dy: -50, mirrorX: 4 });
+    expect(calls[1].payload.edits).toEqual([
+      { handle: "100", text: "ONE" },
+      { handle: "102", text: "TWO" },
+      { handle: "FFF", colorIndex: 1 },
+    ]);
+    expect(calls[2].payload.handles).toEqual(["ABC", "101"]);
+  });
+
+  it("rejects bad refs before touching the drawing", () => {
+    expect(() => validateJob({ copies: [{ id: "a", handles: ["1"], dx: 0, dy: 0 }], edits: [{ ref: "z:1", text: "x" }] }))
+      .toThrow(/unknown copy id/);
+    expect(() => validateJob({ edits: [{ handle: "1", ref: "a:1" }] })).toThrow(/exactly one/);
+    expect(() => validateJob({ copies: [{ id: "a", handles: ["1"], dx: 0, dy: 0 }, { id: "a", handles: ["2"], dx: 0, dy: 0 }] }))
+      .toThrow(/Duplicate/);
+    expect(() => parseJob("{nope")).toThrow(/not valid JSON/);
+  });
+
+  it("reports the created handle maps when a later stage fails", async () => {
+    const job = validateJob({
+      copies: [{ id: "a", handles: ["10"], dx: 1, dy: 1 }],
+      edits: [{ ref: "a:99", text: "x" }],
+    });
+    const { send } = fakePlugin();
+    const result = await runEntityJob(job, send);
+    expect(result.status).toBe("failed");
+    expect(result.stage).toBe("edit");
+    expect(result.handles).toEqual({ a: { "10": "100" } });
+  });
+
+  it("writes the result file beside the job", () => {
+    const file = tempJob({ copies: [] });
+    const { sha256 } = readJobFile(file);
+    const written = writeJobResult(file, {
+      status: "completed", stage: "done", copies: {}, copiedEntities: 0, edited: 0, erased: 0, handles: {},
+    }, sha256);
+    expect(written).toBe(resultFilePath(file));
+    expect(JSON.parse(readFileSync(written, "utf8")).jobSha256).toBe(sha256);
+  });
+
+  it("requires absolute .json job paths", () => {
+    expect(() => readJobFile("relative/job.json")).toThrow(/absolute/);
+    expect(() => readJobFile(path.join(tmpdir(), "job.txt"))).toThrow(/\.json/);
+  });
+});
+
+describe("approval bound to job file contents", () => {
+  it("accepts the unchanged file and rejects an edited one", async () => {
+    const file = tempJob({ copies: [{ id: "a", handles: ["1"], dx: 0, dy: 0 }] });
+    const policy = new ApprovalPolicyService(async () => "drawing-a");
+    const parameters = { action: "apply", jobFile: file };
+
+    const receipt = await policy.requestApproval(applyTarget, parameters);
+    expect(receipt.jobFileSha256).toBe(readJobFile(file).sha256);
+    await expect(policy.enforce(applyTarget, { ...parameters, approvalToken: receipt.approvalToken })).resolves.toBeUndefined();
+
+    const second = await policy.requestApproval(applyTarget, parameters);
+    writeFileSync(file, JSON.stringify({ copies: [{ id: "a", handles: ["2"], dx: 0, dy: 0 }] }), "utf8");
+    await expect(policy.enforce(applyTarget, { ...parameters, approvalToken: second.approvalToken }))
+      .rejects.toThrow(/job file changed/);
+  });
+
+  it("fails approval cleanly when the job file is missing", async () => {
+    const policy = new ApprovalPolicyService(async () => "drawing-a");
+    await expect(policy.requestApproval(applyTarget, { action: "apply", jobFile: path.join(tmpdir(), "missing-job-xyz.json") }))
+      .rejects.toBeInstanceOf(ApprovalValidationError);
+  });
+});
