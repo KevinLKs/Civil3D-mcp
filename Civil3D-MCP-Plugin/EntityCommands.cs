@@ -1,5 +1,6 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
+using System.Globalization;
 using System.Text.Json.Nodes;
 
 namespace Civil3DMcpPlugin;
@@ -206,6 +207,24 @@ public static class EntityCommands
         {
           SetText(entity, text, transaction, index);
           changed.Add("text");
+        }
+
+        // Dynamic properties first: changing a visibility state can rebuild the
+        // anonymous block, so attribute values are written after it.
+        if (edit["dynamicProperties"] is JsonObject dynamicProperties && dynamicProperties.Count > 0)
+        {
+          if (entity is not BlockReference dynamicRef || !dynamicRef.IsDynamicBlock)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: dynamicProperties can only be set on dynamic block references.");
+          }
+
+          var missingProperties = SetDynamicProperties(dynamicRef, dynamicProperties, index);
+          if (missingProperties.Count > 0)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.NOT_FOUND", $"Edit {index}: dynamic properties not found: {string.Join(", ", missingProperties)}. Available: {string.Join(", ", DynamicPropertyNames(dynamicRef))}.");
+          }
+
+          changed.Add("dynamicProperties");
         }
 
         if (edit["attributes"] is JsonObject attributes && attributes.Count > 0)
@@ -666,6 +685,17 @@ public static class EntityCommands
         info["anonymousName"] = name;
         name = dynamicRecord.Name;
         info["dynamic"] = true;
+
+        var dynamicProperties = new Dictionary<string, object?>();
+        foreach (var property in EditableDynamicProperties(blockRef))
+        {
+          dynamicProperties.TryAdd(property.PropertyName, DynamicValueForJson(property.Value));
+        }
+
+        if (dynamicProperties.Count > 0)
+        {
+          info["dynamicProperties"] = dynamicProperties;
+        }
       }
     }
     catch
@@ -797,6 +827,91 @@ public static class EntityCommands
           "CIVIL3D.INVALID_INPUT",
           $"Edit {index}: text cannot be set on a {TypeName(entity)}. Use attributes for block references.");
     }
+  }
+
+  private static IEnumerable<DynamicBlockReferenceProperty> EditableDynamicProperties(BlockReference blockRef)
+  {
+    foreach (DynamicBlockReferenceProperty property in blockRef.DynamicBlockReferencePropertyCollection)
+    {
+      if (!property.ReadOnly && !string.Equals(property.PropertyName, "Origin", StringComparison.OrdinalIgnoreCase))
+      {
+        yield return property;
+      }
+    }
+  }
+
+  private static IEnumerable<string> DynamicPropertyNames(BlockReference blockRef) =>
+    EditableDynamicProperties(blockRef).Select(property => property.PropertyName).Distinct();
+
+  private static object? DynamicValueForJson(object? value) => value switch
+  {
+    null => null,
+    string s => s,
+    double d => R(d),
+    short or int or long or float => Convert.ToDouble(value, CultureInfo.InvariantCulture),
+    _ => Convert.ToString(value, CultureInfo.InvariantCulture),
+  };
+
+  private static List<string> SetDynamicProperties(BlockReference blockRef, JsonObject values, int index)
+  {
+    var missing = new List<string>();
+    foreach (var (name, node) in values)
+    {
+      if (node == null)
+      {
+        continue;
+      }
+
+      var raw = node is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var s)
+        ? s
+        : node.ToJsonString();
+
+      var property = EditableDynamicProperties(blockRef)
+        .FirstOrDefault(p => string.Equals(p.PropertyName, name, StringComparison.OrdinalIgnoreCase));
+      if (property == null)
+      {
+        missing.Add(name);
+        continue;
+      }
+
+      var allowed = property.GetAllowedValues();
+      object newValue;
+      if (allowed != null && allowed.Length > 0)
+      {
+        var hasNumber = double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var number);
+        var match = allowed.FirstOrDefault(a =>
+          string.Equals(Convert.ToString(a, CultureInfo.InvariantCulture), raw, StringComparison.OrdinalIgnoreCase)
+          || (hasNumber && a is double or short or int && Math.Abs(Convert.ToDouble(a, CultureInfo.InvariantCulture) - number) < 1e-9));
+        if (match == null)
+        {
+          var options = string.Join(", ", allowed.Select(a => Convert.ToString(a, CultureInfo.InvariantCulture)));
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: '{raw}' is not an allowed value for {property.PropertyName}. Allowed: {options}.");
+        }
+
+        newValue = match;
+      }
+      else
+      {
+        try
+        {
+          newValue = property.Value switch
+          {
+            double => double.Parse(raw, NumberStyles.Float, CultureInfo.InvariantCulture),
+            short => short.Parse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture),
+            int => int.Parse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture),
+            _ => raw,
+          };
+        }
+        catch (FormatException)
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: '{raw}' is not a valid value for {property.PropertyName}.");
+        }
+      }
+
+      property.Value = newValue;
+    }
+
+    return missing;
   }
 
   private static List<string> SetAttributes(BlockReference blockRef, JsonObject values, Transaction transaction)
