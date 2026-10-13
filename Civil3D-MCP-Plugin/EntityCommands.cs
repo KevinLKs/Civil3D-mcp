@@ -246,6 +246,15 @@ public static class EntityCommands
           }
         }
 
+        var xLine1 = ReadPoint(edit["xLine1"]);
+        var xLine2 = ReadPoint(edit["xLine2"]);
+        var dimLine = ReadPoint(edit["dimLine"]);
+        if (xLine1 != null || xLine2 != null || dimLine != null)
+        {
+          SetDimensionPoints(entity, xLine1, xLine2, dimLine, index);
+          changed.Add("dimensionPoints");
+        }
+
         if (edit["vertices"] is JsonArray vertexNodes)
         {
           var vertices = vertexNodes.Select(node => ReadPoint(node)
@@ -607,6 +616,19 @@ public static class EntityCommands
       case Dimension dimension:
         info["measurement"] = R(dimension.Measurement);
         info["dimensionText"] = dimension.DimensionText;
+        if (includeGeometry && dimension is RotatedDimension rd)
+        {
+          info["xLine1"] = P(rd.XLine1Point);
+          info["xLine2"] = P(rd.XLine2Point);
+          info["dimLine"] = P(rd.DimLinePoint);
+          info["rotationDeg"] = R(rd.Rotation * 180.0 / Math.PI);
+        }
+        else if (includeGeometry && dimension is AlignedDimension ad)
+        {
+          info["xLine1"] = P(ad.XLine1Point);
+          info["xLine2"] = P(ad.XLine2Point);
+          info["dimLine"] = P(ad.DimLinePoint);
+        }
         break;
 
       case BlockReference blockRef:
@@ -843,6 +865,29 @@ public static class EntityCommands
         }
         return;
 
+      case RotatedDimension rotated:
+        rotated.XLine1Point = Mir(rotated.XLine1Point);
+        rotated.XLine2Point = Mir(rotated.XLine2Point);
+        rotated.DimLinePoint = Mir(rotated.DimLinePoint);
+        rotated.Rotation = Math.PI - rotated.Rotation;
+        if (!rotated.UsingDefaultTextPosition)
+        {
+          rotated.TextPosition = Mir(rotated.TextPosition);
+        }
+        rotated.RecomputeDimensionBlock(true);
+        return;
+
+      case AlignedDimension aligned:
+        aligned.XLine1Point = Mir(aligned.XLine1Point);
+        aligned.XLine2Point = Mir(aligned.XLine2Point);
+        aligned.DimLinePoint = Mir(aligned.DimLinePoint);
+        if (!aligned.UsingDefaultTextPosition)
+        {
+          aligned.TextPosition = Mir(aligned.TextPosition);
+        }
+        aligned.RecomputeDimensionBlock(true);
+        return;
+
       case Dimension dimension:
         dimension.TransformBy(mirror);
         dimension.RecomputeDimensionBlock(true);
@@ -963,6 +1008,31 @@ public static class EntityCommands
 
       default:
         throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: vertices can be set on lines, polylines and leaders, not {TypeName(entity)}.");
+    }
+  }
+
+  private static void SetDimensionPoints(Entity entity, Point2d? xLine1, Point2d? xLine2, Point2d? dimLine, int index)
+  {
+    static Point3d To3d(Point2d p, Point3d current) => new(p.X, p.Y, current.Z);
+
+    switch (entity)
+    {
+      case RotatedDimension rotated:
+        if (xLine1 is { } a) rotated.XLine1Point = To3d(a, rotated.XLine1Point);
+        if (xLine2 is { } b) rotated.XLine2Point = To3d(b, rotated.XLine2Point);
+        if (dimLine is { } c) rotated.DimLinePoint = To3d(c, rotated.DimLinePoint);
+        rotated.RecomputeDimensionBlock(true);
+        break;
+
+      case AlignedDimension aligned:
+        if (xLine1 is { } d) aligned.XLine1Point = To3d(d, aligned.XLine1Point);
+        if (xLine2 is { } e) aligned.XLine2Point = To3d(e, aligned.XLine2Point);
+        if (dimLine is { } f) aligned.DimLinePoint = To3d(f, aligned.DimLinePoint);
+        aligned.RecomputeDimensionBlock(true);
+        break;
+
+      default:
+        throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: xLine1/xLine2/dimLine can only be set on linear (rotated or aligned) dimensions, not {TypeName(entity)}.");
     }
   }
 
