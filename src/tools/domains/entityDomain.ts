@@ -34,6 +34,9 @@ const EditSchema = z.object({
   attributes: z.record(z.string(), z.string()).optional().describe("Block attribute values by tag."),
   start: Point2DSchema.optional().describe("New start point (lines only)."),
   end: Point2DSchema.optional().describe("New end point (lines only)."),
+  xLine1: Point2DSchema.optional().describe("Linear dimension: first extension line origin."),
+  xLine2: Point2DSchema.optional().describe("Linear dimension: second extension line origin."),
+  dimLine: Point2DSchema.optional().describe("Linear dimension: a point on the dimension line (sets its offset)."),
   vertices: z.array(Point2DSchema).min(2).optional().describe("Replace all vertices of a line, polyline or leader."),
   colorIndex: z.number().int().min(0).max(256).optional().describe("ACI color: 0 = ByBlock, 256 = ByLayer."),
   linetype: z.string().optional().describe("Linetype name; must already be loaded in the drawing."),
@@ -112,7 +115,7 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
         "Reads, copies, moves, edits and erases ordinary AutoCAD entities (blocks, lines, polylines, text, MText, multileaders, attributes) in model space or a layout. " +
         "query: list entities in a window with handles, block names, attribute values, text and geometry. " +
         "copy: batch copy or move entities by handles and/or window with a dx/dy offset and optional mirror; returns old-to-new handle maps. " +
-        "edit: batch change text, attribute values, vertices/endpoints, color, linetype or layer by handle. " +
+        "edit: batch change text, attribute values, vertices/endpoints, dimension points, color, linetype or layer by handle. " +
         "erase: delete entities by handle. Batch copy and edit work so one approval covers a whole detail.",
       inputShape: {
         action: z.enum(["query", "copy", "edit", "erase"]),
