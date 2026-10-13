@@ -109,6 +109,7 @@ public static class EntityCommands
         }
 
         var displacement = Matrix3d.Displacement(new Vector3d(dx, dy, 0));
+        var mirrorX = operation["mirrorX"]?.GetValue<double>();
         var handleMap = new Dictionary<string, string>();
 
         if (mode == "move")
@@ -122,6 +123,10 @@ public static class EntityCommands
           {
             var entity = (Entity)transaction.GetObject(id, OpenMode.ForWrite);
             entity.TransformBy(displacement);
+            if (mirrorX is { } mx)
+            {
+              MirrorReadable(entity, mx, transaction);
+            }
             var handle = CivilObjectUtils.GetHandle(entity);
             handleMap[handle] = handle;
           }
@@ -144,6 +149,10 @@ public static class EntityCommands
 
             var clone = (Entity)transaction.GetObject(pair.Value, OpenMode.ForWrite);
             clone.TransformBy(displacement);
+            if (mirrorX is { } mx)
+            {
+              MirrorReadable(clone, mx, transaction);
+            }
             handleMap[pair.Key.Handle.ToString()] = clone.Handle.ToString();
           }
         }
@@ -155,6 +164,7 @@ public static class EntityCommands
           ["count"] = handleMap.Count,
           ["dx"] = dx,
           ["dy"] = dy,
+          ["mirrorX"] = mirrorX,
           ["handles"] = handleMap,
         });
       }
@@ -234,6 +244,33 @@ public static class EntityCommands
             line.EndPoint = new Point3d(e.X, e.Y, line.EndPoint.Z);
             changed.Add("end");
           }
+        }
+
+        if (edit["vertices"] is JsonArray vertexNodes)
+        {
+          var vertices = vertexNodes.Select(node => ReadPoint(node)
+            ?? throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: every vertex needs x and y.")).ToList();
+          SetVertices(entity, vertices, index);
+          changed.Add("vertices");
+        }
+
+        var colorIndex = edit["colorIndex"]?.GetValue<int>();
+        if (colorIndex != null)
+        {
+          if (colorIndex < 0 || colorIndex > 256)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: colorIndex must be 0-256 (0 = ByBlock, 256 = ByLayer).");
+          }
+
+          entity.ColorIndex = colorIndex.Value;
+          changed.Add("colorIndex");
+        }
+
+        var linetype = edit["linetype"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(linetype))
+        {
+          entity.LinetypeId = GetLinetypeId(database, transaction, linetype, index);
+          changed.Add("linetype");
         }
 
         var layer = edit["layer"]?.GetValue<string>();
@@ -476,6 +513,11 @@ public static class EntityCommands
     if (entity.ColorIndex != 256)
     {
       info["colorIndex"] = entity.ColorIndex;
+    }
+
+    if (!string.Equals(entity.Linetype, "BYLAYER", StringComparison.OrdinalIgnoreCase))
+    {
+      info["linetype"] = entity.Linetype;
     }
 
     if (TryGetExtents(entity) is { } extents)
@@ -753,6 +795,186 @@ public static class EntityCommands
     }
 
     return pending.Keys.ToList();
+  }
+
+  /// <summary>
+  /// Mirrors an entity across the vertical line x = mirrorX while keeping text
+  /// readable (like MIRROR with MIRRTEXT = 0): text anchors are mirrored and
+  /// left/right justification is swapped instead of reversing the characters.
+  /// </summary>
+  private static void MirrorReadable(Entity entity, double mirrorX, Transaction transaction)
+  {
+    var mirror = Matrix3d.Mirroring(new Line3d(new Point3d(mirrorX, 0, 0), new Point3d(mirrorX, 1, 0)));
+    Point3d Mir(Point3d p) => new(2 * mirrorX - p.X, p.Y, p.Z);
+
+    switch (entity)
+    {
+      case AttributeReference:
+        // Owned by a block reference; handled with its block.
+        return;
+
+      case DBText text:
+        var textState = TextState.Capture(text);
+        textState.Apply(text, Mir);
+        return;
+
+      case MText mtext:
+        mtext.Location = Mir(mtext.Location);
+        mtext.Rotation = -mtext.Rotation;
+        mtext.Attachment = SwapAttachment(mtext.Attachment);
+        return;
+
+      case BlockReference blockRef:
+        var attributeStates = new List<(AttributeReference Attribute, TextState State)>();
+        foreach (ObjectId attributeId in blockRef.AttributeCollection)
+        {
+          if (transaction.GetObject(attributeId, OpenMode.ForWrite, false) is AttributeReference attribute && !attribute.IsMTextAttribute)
+          {
+            attributeStates.Add((attribute, TextState.Capture(attribute)));
+          }
+        }
+
+        blockRef.TransformBy(mirror);
+        foreach (var (attribute, state) in attributeStates)
+        {
+          attribute.IsMirroredInX = false;
+          attribute.IsMirroredInY = false;
+          state.Apply(attribute, Mir);
+        }
+        return;
+
+      case Dimension dimension:
+        dimension.TransformBy(mirror);
+        dimension.RecomputeDimensionBlock(true);
+        return;
+
+      default:
+        entity.TransformBy(mirror);
+        return;
+    }
+  }
+
+  private sealed record TextState(Point3d Anchor, TextHorizontalMode Horizontal, TextVerticalMode Vertical, double Rotation)
+  {
+    public static TextState Capture(DBText text)
+    {
+      var usesPosition = text.HorizontalMode == TextHorizontalMode.TextLeft && text.VerticalMode == TextVerticalMode.TextBase;
+      return new TextState(usesPosition ? text.Position : text.AlignmentPoint, text.HorizontalMode, text.VerticalMode, text.Rotation);
+    }
+
+    public void Apply(DBText text, Func<Point3d, Point3d> mirrorPoint)
+    {
+      var horizontal = Horizontal switch
+      {
+        TextHorizontalMode.TextLeft => TextHorizontalMode.TextRight,
+        TextHorizontalMode.TextRight => TextHorizontalMode.TextLeft,
+        _ => Horizontal,
+      };
+
+      var anchor = mirrorPoint(Anchor);
+      text.IsMirroredInX = false;
+      text.IsMirroredInY = false;
+      text.Rotation = -Rotation;
+      text.HorizontalMode = horizontal;
+      text.VerticalMode = Vertical;
+
+      if (horizontal == TextHorizontalMode.TextLeft && Vertical == TextVerticalMode.TextBase)
+      {
+        text.Position = anchor;
+      }
+      else
+      {
+        text.AlignmentPoint = anchor;
+      }
+
+      text.AdjustAlignment(text.Database);
+    }
+  }
+
+  private static AttachmentPoint SwapAttachment(AttachmentPoint attachment) => attachment switch
+  {
+    AttachmentPoint.TopLeft => AttachmentPoint.TopRight,
+    AttachmentPoint.TopRight => AttachmentPoint.TopLeft,
+    AttachmentPoint.MiddleLeft => AttachmentPoint.MiddleRight,
+    AttachmentPoint.MiddleRight => AttachmentPoint.MiddleLeft,
+    AttachmentPoint.BottomLeft => AttachmentPoint.BottomRight,
+    AttachmentPoint.BottomRight => AttachmentPoint.BottomLeft,
+    _ => attachment,
+  };
+
+  private static void SetVertices(Entity entity, List<Point2d> vertices, int index)
+  {
+    if (vertices.Count < 2)
+    {
+      throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: vertices needs at least two points.");
+    }
+
+    switch (entity)
+    {
+      case Polyline polyline:
+        for (var i = 0; i < vertices.Count; i++)
+        {
+          if (i < polyline.NumberOfVertices)
+          {
+            polyline.SetPointAt(i, vertices[i]);
+          }
+          else
+          {
+            polyline.AddVertexAt(i, vertices[i], 0, 0, 0);
+          }
+        }
+
+        while (polyline.NumberOfVertices > vertices.Count)
+        {
+          polyline.RemoveVertexAt(polyline.NumberOfVertices - 1);
+        }
+        break;
+
+      case Leader leader:
+        var z = leader.NumVertices > 0 ? leader.VertexAt(0).Z : 0;
+        for (var i = 0; i < vertices.Count; i++)
+        {
+          var point = new Point3d(vertices[i].X, vertices[i].Y, z);
+          if (i < leader.NumVertices)
+          {
+            leader.SetVertexAt(i, point);
+          }
+          else
+          {
+            leader.AppendVertex(point);
+          }
+        }
+
+        while (leader.NumVertices > vertices.Count)
+        {
+          leader.RemoveLastVertex();
+        }
+        break;
+
+      case Line line:
+        if (vertices.Count != 2)
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: a line takes exactly two vertices.");
+        }
+
+        line.StartPoint = new Point3d(vertices[0].X, vertices[0].Y, line.StartPoint.Z);
+        line.EndPoint = new Point3d(vertices[1].X, vertices[1].Y, line.EndPoint.Z);
+        break;
+
+      default:
+        throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: vertices can be set on lines, polylines and leaders, not {TypeName(entity)}.");
+    }
+  }
+
+  private static ObjectId GetLinetypeId(Database database, Transaction transaction, string name, int index)
+  {
+    var linetypes = (LinetypeTable)transaction.GetObject(database.LinetypeTableId, OpenMode.ForRead);
+    if (linetypes.Has(name))
+    {
+      return linetypes[name];
+    }
+
+    throw new JsonRpcDispatchException("CIVIL3D.NOT_FOUND", $"Edit {index}: linetype '{name}' is not loaded in this drawing.");
   }
 
   private static Window? ReadWindow(JsonNode? node)
