@@ -468,10 +468,10 @@ def build_sheet(J, Cx, Cy, sheet):
             addr = addr[:TLM_MAX]
         attr = {'STRUCTURE': sheet['pole'], 'CLIMATE-ZONE': tlm.get('cz', ''), 'VD-DROP': tlm.get('vd', ''),
                 'FLICKER': tlm.get('flicker', ''), 'PRI-CIRC': tlm.get('pc', '')}
-        for key, v in zip(['SIZE', 'KVA', 'CUST', 'LOAD'], tlm.get('ex', ['', '', '', ''])):
-            attr['EX-' + key] = v
-        for key, v in zip(['SIZE', 'KVA', 'CUST', 'LOAD'], tlm.get('pr', ['', '', '', ''])):
-            attr['PR-' + key] = v
+        for pre in ('EX', 'PR'):
+            for key, v in zip(['SIZE', 'KVA', 'CUST', 'LOAD'], tlm.get(pre.lower(), ['', '', '', ''])):
+                # the block prints its own % after LOAD: never send one
+                attr[pre + '-' + key] = v.replace('%', '').strip() if key == 'LOAD' else v
         for i in range(10):
             a, m = addr[i] if i < len(addr) else ('', '')
             attr['ADDRESS%d' % (i + 1)] = a
