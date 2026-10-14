@@ -108,6 +108,17 @@ class NewRulesTest(unittest.TestCase):
         box = [e for k, h, e in J.edits if h == ph.TLMNOTE['box']][0]
         self.assertAlmostEqual(box['vertices'][0]['y'], iy - ph.TLM_L10_BOTTOM - 2 * ph.TLM_ROW, 3)
 
+    def test_pick_tlm_extra(self):
+        top, bot = -779.9231, -791.6558
+        ext = lambda y0, y1: dict(min=dict(x=1854.666, y=y0), max=dict(x=1999.2395, y=y1))
+        ents = [dict(handle='A', type='TEXT', text='ADDRESS12', extents=ext(-787.9, -783.1)),
+                dict(handle='M', type='TEXT', text='METER12', extents=ext(-788.2, -783.4)),
+                dict(handle='B13', type='LWPOLYLINE', extents=ext(-803.3884, bot)),
+                dict(handle='B12', type='LWPOLYLINE', extents=ext(bot, top)),
+                dict(handle='L11', type='LINE', extents=ext(top, -768.1905)),
+                dict(handle='L12', type='LINE', extents=ext(bot, top))]
+        self.assertEqual(ph.pick_tlm_extra(ents), ['A', 'M', 'B12', 'L12'])
+
     def test_tlm_over_20_reported(self):
         J = self._sheet(tlm=dict(addr=[['%d A ST' % i, ''] for i in range(22)]))
         self.assertEqual(len([op for k, op in J.ops if op['handles'] == ph.TLM_EXTRA['h']]), 10)

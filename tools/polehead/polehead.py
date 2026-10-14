@@ -132,6 +132,9 @@ TLM_ROW = 11.7326
 # Burst rows 11 to 20 (loose text and lines under a LIST 10 block). Row 12 is the copy source for every row.
 TLM_EXTRA = dict(h=['3975AC', '3975AD', '3975E9', '3975F7'], left=1854.666, top=-779.9231)
 TLM_MAX = 20
+# Query this window (layers MISC) to find the row 12 pieces: TEXT starting ADDRESS (address), TEXT starting METER
+# (meter, center justified on x 1971.588), LWPOLYLINE (open box), LINE (divider). Pass them as spec 'tlm_extra'.
+TLM_EXTRA_WINDOW = dict(minX=1850, minY=-792.5, maxX=2003, maxY=-779.5)
 TLMNOTE = dict(box='392285', hdr=('392287', -677.2306), line=('392288', -689.5668), x=2354.3102)
 
 
@@ -486,7 +489,9 @@ def build_sheet(J, Cx, Cy, sheet):
         ix, iy = Cx + 777.554, Cy + 114.314
         J.cp([TLM[0]], ix - TLM[1], iy - TLM[2], edit=[dict(
             dynamicProperties={'ADDRESS LIST': 'ADDRESS LIST %d' % max(1, min(10, len(addr)))}, attributes=attr)])
-        tlm_extra_rows(J, ix, iy, addr[10:])
+        if len(addr) > 10 and not sheet.get('tlm_extra'):
+            J.report.append('%s: no tlm_extra handles in the spec; using the TD2536012 handles' % sheet['pole'])
+        tlm_extra_rows(J, ix, iy, addr[10:], sheet.get('tlm_extra'))
         notes = tlm.get('notes') or []
         if notes:
             # box directly under the visible table; same x span as the block
@@ -534,9 +539,26 @@ def tlm_bottom(iy, n):
     return iy - TLM_L10_BOTTOM - (n - 10) * TLM_ROW
 
 
-def tlm_extra_rows(J, ix, iy, extra):
-    """Rows 11 and up: copy the row 12 pieces (address, meter, open box, divider) under a LIST 10 block."""
-    src = TLM_EXTRA
+def pick_tlm_extra(entities):
+    """Row 12 handles [address, meter, box, line] from a civil3d_entity query of TLM_EXTRA_WINDOW.
+
+    The query returns anything touching the window (rows 11 and 13 too), so pick by text and by the row 12 span."""
+    def span(e):
+        return abs(e['extents']['max']['y'] - TLM_EXTRA['top']) < 0.1 and \
+            abs(e['extents']['min']['y'] - (TLM_EXTRA['top'] - TLM_ROW)) < 0.1
+    pick = lambda f: next(e['handle'] for e in entities if f(e))
+    return [pick(lambda e: e['type'] == 'TEXT' and e.get('text', '').upper().startswith('ADDRESS')),
+            pick(lambda e: e['type'] == 'TEXT' and e.get('text', '').upper().startswith('METER')),
+            pick(lambda e: e['type'] == 'LWPOLYLINE' and span(e)),
+            pick(lambda e: e['type'] == 'LINE' and span(e))]
+
+
+def tlm_extra_rows(J, ix, iy, extra, handles=None):
+    """Rows 11 and up: copy the row 12 pieces (address, meter, open box, divider) under a LIST 10 block.
+
+    handles: [address, meter, box, line] of the row 12 pieces in THIS drawing (spec 'tlm_extra'), found with a
+    query of the TLM_EXTRA_WINDOW; the coordinates are fixed in the template but the handles are not."""
+    src = dict(TLM_EXTRA, h=list(handles or TLM_EXTRA['h']))
     for j, (a, m) in enumerate(extra):
         top = iy - TLM_L10_BOTTOM - j * TLM_ROW
         J.cp(src['h'], ix - src['left'], top - src['top'], edit=[dict(text=a), dict(text=m)])
@@ -565,6 +587,8 @@ def build_job(spec):
             prof = _copy.deepcopy(prof)
             prof['num'] = pole['pole']
             build_pole(J, P, Cy, prof)
+        if spec.get('tlm_extra'):
+            pole = dict(pole, tlm_extra=spec['tlm_extra'])
         build_sheet(J, Cx, Cy, pole)
         J.edit_existing(NAME_HANDLES[idx], dict(text=pole['pole']))
         if idx in ROW3_SHEET_NUMBERS:
