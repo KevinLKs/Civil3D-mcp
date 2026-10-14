@@ -105,7 +105,8 @@ ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.1
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 DE1_PINS = ('2E3419', '2E3916')
 SG_LEN = 33.76
-COL = {1: 40.75, -1: 35.75}                      # Kevin's callout column: right side P + 40.75, left side P - 35.75
+COL_GAP = 5.75                                    # callout column clearance past the farthest equipment
+COL_MIN = 30.75                                   # never closer than an X COND tip (25) + gap
 CALLOUT = ('37BBC7', 4558.3319, -1320.0283)      # right justified: right edge, baseline
 HDIM = ('2E34A7', 3329.4667, -1946.2563)         # pole x, ground
 LDIM = ('38F31B', 3415.3369, -1946.2563)
@@ -300,15 +301,17 @@ def place_item(J, P, r, it, sc):
 
 def build_pole(J, P, G, spec):
     sc = 1 if spec['side'] == 'R' else -1
-    col = COL[sc]                                         # callout column distance from the pole
     items = spec['items']
     assign_rows(items)
     top = 0
     texts = []           # callout text boxes (x0, x1, baseline)
     for it in items:
-        r = G + it['row']
-        it['a'] = place_item(J, P, r, it, sc)
+        it['a'] = place_item(J, P, G + it['row'], it, sc)
         top = max(top, it['row'])
+    # callout column: 5.75 past the farthest equipment on the callout side (arm 35 -> 40.75, dead end 30 -> 35.75)
+    col = max([COL_MIN] + [it['a'] + COL_GAP for it in items])
+    for it in items:
+        r = G + it['row']
         lines = list(it.get('above', [])) + list(it['c'])
         n_above = len(it.get('above', []))
         it['lines'] = []
