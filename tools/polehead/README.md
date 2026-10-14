@@ -58,7 +58,8 @@ for the measure-and-fix pass.
   - `arm` crossarm with any mix: `pins` and `circ` are slot indexes 0 to 3, left to right (-29.76, -12.13, +12.13, +29.76).
   - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
     `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
-  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM square beside the pole at that row.
+  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM (guard arm) beside the pole, hanging just below that row's
+    line (box top on the line, insertion 2.5 below the row).
   - `o`: tie-break order for two items at the same height.
 - `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed.
 

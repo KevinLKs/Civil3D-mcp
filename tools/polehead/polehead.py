@@ -291,9 +291,9 @@ def place_item(J, P, r, it, sc):
             J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['fhla'] == 'R' else None)
     else:
         raise ValueError('unknown item type %r' % t)
-    if it.get('box'):                                      # lone SIDE XARM beside the pole at this row
+    if it.get('box'):                                      # lone SIDE XARM (guard arm) hanging just below the row line
         src = SRC['sbox']
-        J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['box'] == 'L' else None)
+        J.cp(src['h'], P - src['px'], r - 2.5 - src['py'], mirror=P if it['box'] == 'L' else None)
         if (1 if it['box'] == 'R' else -1) == sc:
             a = max(a, 5)
     if t == 'dot' or it.get('dot'):
