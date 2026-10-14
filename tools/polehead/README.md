@@ -43,7 +43,7 @@ for the measure-and-fix pass.
 ```
 
 - `frame` 0 to 11, left to right, top row first. One profile is drawn at Cx - 300, two at Cx -/+ 300 (PDF left, then right).
-- `side`: callout and dim side, `R` or `L`. `gside`: guys and anchors side, `1` right, `-1` left (needed when there are anchors).
+- `side`: callout and dim side, `R` or `L`. Callout column: 5.75 past the farthest equipment on the callout side (crossarm 35 -> 40.75, dead end 30 -> 35.75, X COND 25 -> 30.75 minimum). `gside`: guys and anchors side, `1` right, `-1` left (needed when there are anchors).
 - Item `h`: true height as written. `c`: callout lines at the row. `above`: extra lines stacked above the row's own line (FH/LA on a primary box).
 - Item types (`t`) and `k`:
   - `pri` side arm box with pin and X CONDs. `k`: `R`, `L` or `C` box position, `B` a box on each side. `fhla: true` puts the SA and CUTOUT on that box.
@@ -53,7 +53,10 @@ for the measure-and-fix pass.
   - `dot` SEC-MISC dot alone (a bare dot with no line).
   - `sg` span guy half, `k` `R` or `L` (never mirrored or edited). `share: 1` puts it on the row of the other item at that whole foot.
   - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm. `arm2fl` 2/C arm with FH and LA.
-  - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways.
+  - `arm` crossarm with any mix: `pins` and `circ` are slot indexes 0 to 3, left to right (-29.76, -12.13, +12.13, +29.76).
+  - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
+    `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
+  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM square beside the pole at that row.
   - `o`: tie-break order for two items at the same height.
 - `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed.
 
@@ -66,8 +69,19 @@ anchor scale from the shortest lead, DG stacking and lift, pole label by guy
 side, CREW/NOTE/GPS/ELEV stack, ELEV as a bare number, TLM street-only
 addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
 
+- Pole `calcs`: `[{"hdr": "%%UUNGUYED DE CALC (7733E)", "rows": [["left", "= right"], ...]}]`, drawn from the NOTE
+  stash pieces, first box top at Cy - 100, each next 10 below. In combined
+  calcs the line under each lettered load (`A. ...`, `B. ...`) is indented 9.923. `tlm.notes`: TLM NOTE box under the visible table.
+- EX-LOAD and PR-LOAD are sent without `%` (the block prints its own).
+- More than 10 TLM addresses: the block stays at ADDRESS LIST 10 and rows 11 to 20 are burst rows (row 12 pieces
+  3975AC, 3975AD, 3975E9, 3975F7 copied down 11.7326 per row from the LIST 10 bottom, insertion y - 129.0591).
+  The TLM NOTE box goes under the last row. Over 20: first 20 filled and reported.
+  The handles differ per drawing: query `TLM_EXTRA_WINDOW` (x 1850 to 2003, y -792.5 to -779.5, layer MISC) and put
+  them in the spec as `"tlm_extra": [address text, meter text, box polyline, divider line]`; `pick_tlm_extra(entities)`
+  picks them out of the query result (it also returns rows 11 and 13).
+
 ## Not generated
 
-DE CALC boxes, TLM NOTE boxes and slanted pins are still drafted by hand.
+Slanted pins are still drafted by hand. Calc boxes are estimated: re-fit and re-center them after measuring.
 Note box widths and DG leader ends use text width estimates: measure them after
 the job and fix them in one edit batch.

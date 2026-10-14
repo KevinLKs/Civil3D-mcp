@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import copy as _copy
 import json
+import re
 import sys
 
 # ------------------------------------------------------------------ frames
@@ -98,8 +99,14 @@ SRC = {
     'de2x':   dict(h=['2E3490', '2E3418', '2E3417', '2E3416'], px=4697.5843, py=-1446.6283),
     'sg_l':   dict(h=['2E3466'], px=4371.2932, py=-1992.9099),   # span guy half running LEFT
     'sg_r':   dict(h=['2E3954'], px=4371.2932, py=-1992.9099),   # span guy half running RIGHT
+    'sbox':   dict(h=['2E3912'], px=4697.5843, py=-1446.6283),   # lone SIDE XARM, box pole to pole + 5
 }
+ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.13, +29.76
+ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
+DE1_PINS = ('2E3419', '2E3916')
 SG_LEN = 33.76
+COL_GAP = 5.75                                    # callout column clearance past the farthest equipment
+COL_MIN = 30.75                                   # never closer than an X COND tip (25) + gap
 CALLOUT = ('37BBC7', 4558.3319, -1320.0283)      # right justified: right edge, baseline
 HDIM = ('2E34A7', 3329.4667, -1946.2563)         # pole x, ground
 LDIM = ('38F31B', 3415.3369, -1946.2563)
@@ -118,6 +125,17 @@ NOTE = dict(box='391E86', hdr=('391EA3', -162.9075), line=('391E99', -170.9346),
 GPS = ('391E87', -263.517, 43.23)
 ELEV = ('391EA0', -283.4196, 14.90)
 TLM = ('392289', 2350.1087, -540.1907)
+CALC_INDENT = 9.923
+TLM_W = 144.5734
+TLM_L10_BOTTOM = 129.0591          # insertion y minus the bottom of the LIST 10 table
+TLM_ROW = 11.7326
+# Burst rows 11 to 20 (loose text and lines under a LIST 10 block). Row 12 is the copy source for every row.
+TLM_EXTRA = dict(h=['3975AC', '3975AD', '3975E9', '3975F7'], left=1854.666, top=-779.9231)
+TLM_MAX = 20
+# Query this window (layers MISC) to find the row 12 pieces: TEXT starting ADDRESS (address), TEXT starting METER
+# (meter, center justified on x 1971.588), LWPOLYLINE (open box), LINE (divider). Pass them as spec 'tlm_extra'.
+TLM_EXTRA_WINDOW = dict(minX=1850, minY=-792.5, maxX=2003, maxY=-779.5)
+TLMNOTE = dict(box='392285', hdr=('392287', -677.2306), line=('392288', -689.5668), x=2354.3102)
 
 
 def r4(v):
@@ -249,6 +267,12 @@ def place_item(J, P, r, it, sc):
         src = SRC[{'arm2': 'pins2', 'arm4': 'pins4', 'armc': 'circ4'}[t]]
         J.cp(src['h'], P - src['px'], r - src['py'])
         a = 35
+    elif t == 'arm':
+        # crossarm with any mix of pins and conductor circles: pins/circ = slot indexes 0..3 (left to right)
+        src = SRC['arm']
+        hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', [])] + [ARM_CIRC[i] for i in it.get('circ', [])]
+        J.cp(hs, P - src['px'], r - src['py'])
+        a = 35
     elif t in ('fhlaf', 'arm2fl'):
         src = SRC[t]
         J.cp(src['h'], P - src['px'], r - src['py'])
@@ -256,11 +280,22 @@ def place_item(J, P, r, it, sc):
     elif t in ('de1', 'de2'):
         src = SRC['de1']
         hs = src['h'] + (SRC['de2x']['h'] if t == 'de2' else [])
+        if it.get('nopins'):
+            hs = [h for h in hs if h not in DE1_PINS]
         J.cp(hs, P - src['px'], r - src['py'], mirror=P if k == 'L' else None)
         dirs = [1, -1] if t == 'de2' else ([-1] if k == 'L' else [1])
         a = 30 if sc in dirs else 5
+        if it.get('fhla'):
+            # SA + CUTOUT on the dead end boxes; fhla 'R' = cutout left, SA right (mirrored)
+            src = SRC['fhla_on_box']
+            J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['fhla'] == 'R' else None)
     else:
         raise ValueError('unknown item type %r' % t)
+    if it.get('box'):                                      # lone SIDE XARM beside the pole at this row
+        src = SRC['sbox']
+        J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['box'] == 'L' else None)
+        if (1 if it['box'] == 'R' else -1) == sc:
+            a = max(a, 5)
     if t == 'dot' or it.get('dot'):
         src = SRC['dot']
         J.cp(src['h'], P - src['px'], r - src['py'])
@@ -274,18 +309,21 @@ def build_pole(J, P, G, spec):
     top = 0
     texts = []           # callout text boxes (x0, x1, baseline)
     for it in items:
-        r = G + it['row']
-        it['a'] = place_item(J, P, r, it, sc)
+        it['a'] = place_item(J, P, G + it['row'], it, sc)
         top = max(top, it['row'])
+    # callout column: 5.75 past the farthest equipment on the callout side (arm 35 -> 40.75, dead end 30 -> 35.75)
+    col = max([COL_MIN] + [it['a'] + COL_GAP for it in items])
+    for it in items:
+        r = G + it['row']
         lines = list(it.get('above', [])) + list(it['c'])
         n_above = len(it.get('above', []))
         it['lines'] = []
         for j, line in enumerate(lines):
             yb = r + 1.6 + 8 * (n_above - j)              # 'above' lines stack over the row's own line
-            J.cp([CALLOUT[0]], (P - 41.27) - CALLOUT[1], yb - CALLOUT[2], mirror=P if sc > 0 else None,
+            J.cp([CALLOUT[0]], (P - col) - CALLOUT[1], yb - CALLOUT[2], mirror=P if sc > 0 else None,
                  edit=[dict(text=line, colorIndex=90) if color_for(line) == 90 else dict(text=line)])
             it['lines'].append((yb, line))
-            x0, x1 = 41.27, 41.27 + callout_w(line)
+            x0, x1 = col, col + callout_w(line)
             texts.append((P + sc * x0, P + sc * x1, yb))
 
     # pole line
@@ -314,7 +352,7 @@ def build_pole(J, P, G, spec):
         for jt in dims:
             if jt['row'] <= it['row']:
                 for (yb, line) in jt['lines']:
-                    e = 41.27 + callout_w(line)
+                    e = col + callout_w(line)
                     if e > ext:
                         ext, beside = e, (jt is it and yb < G + it['row'])
         x0 = max(x0, ext + (4.4 if beside else 1.92) - 12 * i)
@@ -435,24 +473,95 @@ def build_sheet(J, Cx, Cy, sheet):
     tlm = sheet.get('tlm')
     if tlm:
         addr = [[street_only(a), m] for a, m in tlm.get('addr', [])]
-        if len(addr) > 10:
-            J.report.append('%s: %d TLM addresses, only the first 10 fit; needs guidance' % (sheet['pole'], len(addr)))
-            addr = addr[:10]
+        if len(addr) > TLM_MAX:
+            J.report.append('%s: %d TLM addresses, only the first %d fit; needs guidance' % (sheet['pole'], len(addr), TLM_MAX))
+            addr = addr[:TLM_MAX]
         attr = {'STRUCTURE': sheet['pole'], 'CLIMATE-ZONE': tlm.get('cz', ''), 'VD-DROP': tlm.get('vd', ''),
                 'FLICKER': tlm.get('flicker', ''), 'PRI-CIRC': tlm.get('pc', '')}
-        for key, v in zip(['SIZE', 'KVA', 'CUST', 'LOAD'], tlm.get('ex', ['', '', '', ''])):
-            attr['EX-' + key] = v
-        for key, v in zip(['SIZE', 'KVA', 'CUST', 'LOAD'], tlm.get('pr', ['', '', '', ''])):
-            attr['PR-' + key] = v
+        for pre in ('EX', 'PR'):
+            for key, v in zip(['SIZE', 'KVA', 'CUST', 'LOAD'], tlm.get(pre.lower(), ['', '', '', ''])):
+                # the block prints its own % after LOAD: never send one
+                attr[pre + '-' + key] = v.replace('%', '').strip() if key == 'LOAD' else v
         for i in range(10):
             a, m = addr[i] if i < len(addr) else ('', '')
             attr['ADDRESS%d' % (i + 1)] = a
             attr['METER%d' % (i + 1)] = m
         ix, iy = Cx + 777.554, Cy + 114.314
         J.cp([TLM[0]], ix - TLM[1], iy - TLM[2], edit=[dict(
-            dynamicProperties={'ADDRESS LIST': 'ADDRESS LIST %d' % max(1, len(addr))}, attributes=attr)])
-        if tlm.get('notes'):
-            J.report.append('%s: TLM NOTE box not generated yet; draft it by hand' % sheet['pole'])
+            dynamicProperties={'ADDRESS LIST': 'ADDRESS LIST %d' % max(1, min(10, len(addr)))}, attributes=attr)])
+        if len(addr) > 10 and not sheet.get('tlm_extra'):
+            J.report.append('%s: no tlm_extra handles in the spec; using the TD2536012 handles' % sheet['pole'])
+        tlm_extra_rows(J, ix, iy, addr[10:], sheet.get('tlm_extra'))
+        notes = tlm.get('notes') or []
+        if notes:
+            # box directly under the visible table; same x span as the block
+            top = tlm_bottom(iy, len(addr))
+            tx = ix + 4.20
+            J.cp([TLMNOTE['hdr'][0]], tx - TLMNOTE['x'], (top - 7.98) - TLMNOTE['hdr'][1])
+            yb = top - 20.32
+            for t in notes:
+                J.cp([TLMNOTE['line'][0]], tx - TLMNOTE['x'], yb - TLMNOTE['line'][1], edit=[dict(text=t)])
+                yb -= 8.03
+            bot = yb + 8.03 - 7.40
+            J.cp([TLMNOTE['box']], 0, 0, edit=[dict(vertices=[pt(ix, top), pt(ix + TLM_W, top), pt(ix + TLM_W, bot), pt(ix, bot)])])
+    top = Cy - 100
+    for calc in sheet.get('calcs') or []:
+        top = build_calc(J, Cx, top, calc) - 10
+
+
+def build_calc(J, Cx, top, calc):
+    """DE CALC box from the NOTE stash pieces (DECAL, SIMPLEX 4.8), centered on Cx. Returns the bottom."""
+    rows = calc['rows']
+    w = max([2.876 + note_w(calc['hdr'].replace('%%U', '')) + 3] +
+            [208.34 + note_w(r[1]) + 5.63 if r[1] else 2.876 + note_w(r[0]) + 3 for r in rows])   # re-fit after measuring
+    L = Cx - w / 2
+    J.cp([NOTE['hdr'][0]], L + 2.876 - STASH_TEXT_X, (top - 8.02) - NOTE['hdr'][1], edit=[dict(text=calc['hdr'])])
+    yb = top - 17.65
+    prev = ''
+    for left, right in rows:
+        # combined calcs: the LBS x height line under a lettered load (A., B., ...) is indented
+        ind = CALC_INDENT if re.match(r'^[A-Z]\. ', prev) else 0
+        prev = left
+        J.cp([NOTE['line'][0]], L + 2.876 + ind - STASH_TEXT_X, yb - NOTE['line'][1], edit=[dict(text=left)])
+        if right:
+            J.cp([NOTE['line'][0]], L + 208.34 - STASH_TEXT_X, yb - NOTE['line'][1], edit=[dict(text=right)])
+        yb -= 8.027
+    bot = yb + 8.027 - 4.22
+    J.cp([NOTE['box']], 0, 0, edit=[dict(vertices=[pt(L, top), pt(L + w, top), pt(L + w, bot), pt(L, bot)])])
+    return bot
+
+
+def tlm_bottom(iy, n):
+    """Bottom of the visible TLM table, including burst rows 11 and up."""
+    n = max(1, n)
+    if n <= 10:
+        return iy - 70.40 - (n - 5) * 11.73
+    return iy - TLM_L10_BOTTOM - (n - 10) * TLM_ROW
+
+
+def pick_tlm_extra(entities):
+    """Row 12 handles [address, meter, box, line] from a civil3d_entity query of TLM_EXTRA_WINDOW.
+
+    The query returns anything touching the window (rows 11 and 13 too), so pick by text and by the row 12 span."""
+    def span(e):
+        return abs(e['extents']['max']['y'] - TLM_EXTRA['top']) < 0.1 and \
+            abs(e['extents']['min']['y'] - (TLM_EXTRA['top'] - TLM_ROW)) < 0.1
+    pick = lambda f: next(e['handle'] for e in entities if f(e))
+    return [pick(lambda e: e['type'] == 'TEXT' and e.get('text', '').upper().startswith('ADDRESS')),
+            pick(lambda e: e['type'] == 'TEXT' and e.get('text', '').upper().startswith('METER')),
+            pick(lambda e: e['type'] == 'LWPOLYLINE' and span(e)),
+            pick(lambda e: e['type'] == 'LINE' and span(e))]
+
+
+def tlm_extra_rows(J, ix, iy, extra, handles=None):
+    """Rows 11 and up: copy the row 12 pieces (address, meter, open box, divider) under a LIST 10 block.
+
+    handles: [address, meter, box, line] of the row 12 pieces in THIS drawing (spec 'tlm_extra'), found with a
+    query of the TLM_EXTRA_WINDOW; the coordinates are fixed in the template but the handles are not."""
+    src = dict(TLM_EXTRA, h=list(handles or TLM_EXTRA['h']))
+    for j, (a, m) in enumerate(extra):
+        top = iy - TLM_L10_BOTTOM - j * TLM_ROW
+        J.cp(src['h'], ix - src['left'], top - src['top'], edit=[dict(text=a), dict(text=m)])
 
 
 def street_only(address):
@@ -478,6 +587,8 @@ def build_job(spec):
             prof = _copy.deepcopy(prof)
             prof['num'] = pole['pole']
             build_pole(J, P, Cy, prof)
+        if spec.get('tlm_extra'):
+            pole = dict(pole, tlm_extra=spec['tlm_extra'])
         build_sheet(J, Cx, Cy, pole)
         J.edit_existing(NAME_HANDLES[idx], dict(text=pole['pole']))
         if idx in ROW3_SHEET_NUMBERS:
