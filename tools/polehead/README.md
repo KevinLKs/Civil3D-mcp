@@ -70,7 +70,8 @@ side, CREW/NOTE/GPS/ELEV stack, ELEV as a bare number, TLM street-only
 addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
 
 - Pole `calcs`: `[{"hdr": "%%UUNGUYED DE CALC (7733E)", "rows": [["left", "= right"], ...]}]`, drawn from the NOTE
-  stash pieces, first box top at Cy - 100, each next 10 below. `tlm.notes`: TLM NOTE box under the visible table.
+  stash pieces, first box top at Cy - 100, each next 10 below. In combined
+  calcs the line under each lettered load (`A. ...`, `B. ...`) is indented 9.923. `tlm.notes`: TLM NOTE box under the visible table.
 - EX-LOAD and PR-LOAD are sent without `%` (the block prints its own).
 - More than 10 TLM addresses: the block stays at ADDRESS LIST 10 and rows 11 to 20 are burst rows (row 12 pieces
   3975AC, 3975AD, 3975E9, 3975F7 copied down 11.7326 per row from the LIST 10 bottom, insertion y - 129.0591).

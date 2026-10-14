@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import copy as _copy
 import json
+import re
 import sys
 
 # ------------------------------------------------------------------ frames
@@ -122,6 +123,7 @@ NOTE = dict(box='391E86', hdr=('391EA3', -162.9075), line=('391E99', -170.9346),
 GPS = ('391E87', -263.517, 43.23)
 ELEV = ('391EA0', -283.4196, 14.90)
 TLM = ('392289', 2350.1087, -540.1907)
+CALC_INDENT = 9.923
 TLM_W = 144.5734
 TLM_L10_BOTTOM = 129.0591          # insertion y minus the bottom of the LIST 10 table
 TLM_ROW = 11.7326
@@ -505,8 +507,12 @@ def build_calc(J, Cx, top, calc):
     L = Cx - w / 2
     J.cp([NOTE['hdr'][0]], L + 2.876 - STASH_TEXT_X, (top - 8.02) - NOTE['hdr'][1], edit=[dict(text=calc['hdr'])])
     yb = top - 17.65
+    prev = ''
     for left, right in rows:
-        J.cp([NOTE['line'][0]], L + 2.876 - STASH_TEXT_X, yb - NOTE['line'][1], edit=[dict(text=left)])
+        # combined calcs: the LBS x height line under a lettered load (A., B., ...) is indented
+        ind = CALC_INDENT if re.match(r'^[A-Z]\. ', prev) else 0
+        prev = left
+        J.cp([NOTE['line'][0]], L + 2.876 + ind - STASH_TEXT_X, yb - NOTE['line'][1], edit=[dict(text=left)])
         if right:
             J.cp([NOTE['line'][0]], L + 208.34 - STASH_TEXT_X, yb - NOTE['line'][1], edit=[dict(text=right)])
         yb -= 8.027
