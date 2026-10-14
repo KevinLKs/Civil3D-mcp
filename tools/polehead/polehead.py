@@ -214,6 +214,19 @@ def assign_rows(items):
                              if o is not it and not o.get('share') and int(ft(o['h'])) == int(ft(it['h'])))
 
 
+CUTOUT_SIDE = ('2E3872', 5267.7315)                # side view CUTOUT (S), insertion = center, P + 3.2159 in the Builder
+
+
+def cp_fhla(J, P, r, handles, cutout_left):
+    """Side view SA (+ box) and CUTOUT. The S is NEVER mirrored: with the cutout on the left of the pole the
+    other pieces are mirrored and the S is copied unmirrored to the mirrored spot (center P - 3.2159)."""
+    src = SRC['fhla']
+    rest = [h for h in handles if h != CUTOUT_SIDE[0]]
+    J.cp(rest, P - src['px'], r - src['py'], mirror=P if cutout_left else None)
+    cx = P - 3.2159 if cutout_left else P + 3.2159
+    J.cp([CUTOUT_SIDE[0]], cx - CUTOUT_SIDE[1], r - src['py'])
+
+
 def place_item(J, P, r, it, sc):
     """Copies one equipment item at row y r; returns attach offset on the dim side."""
     t, k = it['t'], it.get('k', 'C')
@@ -232,15 +245,13 @@ def place_item(J, P, r, it, sc):
         a = max(sc * box[0], sc * box[1], 0)
         if it.get('fhla'):
             # FH/LA drawn on the primary box: SA + CUTOUT on that box, no box of their own.
-            src = SRC['fhla_on_box']
             box_right = k == 'R'
-            J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if box_right else None)
+            cp_fhla(J, P, r, SRC['fhla_on_box']['h'], box_right)
             right, left = (7.0, 5.43) if box_right else (5.43, 7.0)
             a = max(a, right if sc > 0 else left)
     elif t == 'fhla':
-        src = SRC['fhla']
         box_right = k == 'R'                               # box left of the pole unless 'R'
-        J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if box_right else None)
+        cp_fhla(J, P, r, SRC['fhla']['h'], box_right)
         right, left = (7.0, 5.43) if box_right else (5.43, 7.0)
         a = right if sc > 0 else left
     elif t == 'xfmr':
@@ -287,8 +298,7 @@ def place_item(J, P, r, it, sc):
         a = 30 if sc in dirs else 5
         if it.get('fhla'):
             # SA + CUTOUT on the dead end boxes; fhla 'R' = cutout left, SA right (mirrored)
-            src = SRC['fhla_on_box']
-            J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['fhla'] == 'R' else None)
+            cp_fhla(J, P, r, SRC['fhla_on_box']['h'], it['fhla'] == 'R')
     else:
         raise ValueError('unknown item type %r' % t)
     if it.get('box'):                                      # lone SIDE XARM (guard arm) hanging just below the row line
