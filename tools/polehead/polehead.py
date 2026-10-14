@@ -123,6 +123,11 @@ GPS = ('391E87', -263.517, 43.23)
 ELEV = ('391EA0', -283.4196, 14.90)
 TLM = ('392289', 2350.1087, -540.1907)
 TLM_W = 144.5734
+TLM_L10_BOTTOM = 129.0591          # insertion y minus the bottom of the LIST 10 table
+TLM_ROW = 11.7326
+# Burst rows 11 to 20 (loose text and lines under a LIST 10 block). Row 12 is the copy source for every row.
+TLM_EXTRA = dict(h=['3975AC', '3975AD', '3975E9', '3975F7'], left=1854.666, top=-779.9231)
+TLM_MAX = 20
 TLMNOTE = dict(box='392285', hdr=('392287', -677.2306), line=('392288', -689.5668), x=2354.3102)
 
 
@@ -458,9 +463,9 @@ def build_sheet(J, Cx, Cy, sheet):
     tlm = sheet.get('tlm')
     if tlm:
         addr = [[street_only(a), m] for a, m in tlm.get('addr', [])]
-        if len(addr) > 10:
-            J.report.append('%s: %d TLM addresses, only the first 10 fit; needs guidance' % (sheet['pole'], len(addr)))
-            addr = addr[:10]
+        if len(addr) > TLM_MAX:
+            J.report.append('%s: %d TLM addresses, only the first %d fit; needs guidance' % (sheet['pole'], len(addr), TLM_MAX))
+            addr = addr[:TLM_MAX]
         attr = {'STRUCTURE': sheet['pole'], 'CLIMATE-ZONE': tlm.get('cz', ''), 'VD-DROP': tlm.get('vd', ''),
                 'FLICKER': tlm.get('flicker', ''), 'PRI-CIRC': tlm.get('pc', '')}
         for key, v in zip(['SIZE', 'KVA', 'CUST', 'LOAD'], tlm.get('ex', ['', '', '', ''])):
@@ -473,12 +478,12 @@ def build_sheet(J, Cx, Cy, sheet):
             attr['METER%d' % (i + 1)] = m
         ix, iy = Cx + 777.554, Cy + 114.314
         J.cp([TLM[0]], ix - TLM[1], iy - TLM[2], edit=[dict(
-            dynamicProperties={'ADDRESS LIST': 'ADDRESS LIST %d' % max(1, len(addr))}, attributes=attr)])
+            dynamicProperties={'ADDRESS LIST': 'ADDRESS LIST %d' % max(1, min(10, len(addr)))}, attributes=attr)])
+        tlm_extra_rows(J, ix, iy, addr[10:])
         notes = tlm.get('notes') or []
         if notes:
             # box directly under the visible table; same x span as the block
-            n = max(1, len(addr))
-            top = iy - 70.40 - (n - 5) * 11.73
+            top = tlm_bottom(iy, len(addr))
             tx = ix + 4.20
             J.cp([TLMNOTE['hdr'][0]], tx - TLMNOTE['x'], (top - 7.98) - TLMNOTE['hdr'][1])
             yb = top - 20.32
@@ -508,6 +513,22 @@ def build_calc(J, Cx, top, calc):
     bot = yb + 8.027 - 4.22
     J.cp([NOTE['box']], 0, 0, edit=[dict(vertices=[pt(L, top), pt(L + w, top), pt(L + w, bot), pt(L, bot)])])
     return bot
+
+
+def tlm_bottom(iy, n):
+    """Bottom of the visible TLM table, including burst rows 11 and up."""
+    n = max(1, n)
+    if n <= 10:
+        return iy - 70.40 - (n - 5) * 11.73
+    return iy - TLM_L10_BOTTOM - (n - 10) * TLM_ROW
+
+
+def tlm_extra_rows(J, ix, iy, extra):
+    """Rows 11 and up: copy the row 12 pieces (address, meter, open box, divider) under a LIST 10 block."""
+    src = TLM_EXTRA
+    for j, (a, m) in enumerate(extra):
+        top = iy - TLM_L10_BOTTOM - j * TLM_ROW
+        J.cp(src['h'], ix - src['left'], top - src['top'], edit=[dict(text=a), dict(text=m)])
 
 
 def street_only(address):
