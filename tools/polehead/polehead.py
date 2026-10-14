@@ -410,11 +410,11 @@ def build_pole(J, P, G, spec):
         x0 = max(x0, ext + (4.4 if beside else 1.92) - 12 * i)
     tys, bad = place_labels(dims, G, P, sc, x0, texts)
     for i in bad:
-        J.report.append('%s: dim label %s could not clear its neighbours; check it' % (spec.get('num'), dims[i]['h']))
+        J.report.append('%s: dim label %s could not clear its neighbours; check it' % (spec.get('num'), dims[i].get('label', dims[i]['h'])))
     for i, it in enumerate(dims):
         dxp = P + sc * (x0 + 12 * i)
         top_y = G + it['row']
-        txt = it['h']
+        txt = it.get('label', it['h'])                   # no planner height: h = drawn spot, label "_'"
         ty = tys[i]
         J.cp([HDIM[0]], P - HDIM[1], G - HDIM[2], edit=[dict(
             xLine1=pt(P + sc * it['a'], top_y), xLine2=pt(P, G), dimLine=pt(dxp, G),
@@ -503,7 +503,7 @@ def place_labels(dims, G, P, sc, x0, texts):
     below its midpoint (down to just above ground) so the whole run fits. Returns (y list, indexes still clashing)."""
     n = len(dims)
     xs = [P + sc * (x0 + 12 * i) for i in range(n)]
-    ws = [label_w(d['h']) for d in dims]
+    ws = [label_w(d.get('label', d['h'])) for d in dims]
     mids = [(2 * G + d['row']) / 2 for d in dims]
     tops = [G + d['row'] - LABEL_H / 2 - 1 for d in dims]
     floor = G + LABEL_H / 2 + 1.5

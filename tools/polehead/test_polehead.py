@@ -120,6 +120,12 @@ class NewRulesTest(unittest.TestCase):
             want = {'pri': -3.3132, 'fhla': -3.3132, 'de1': -8.3132}[it['t']] if left else 3.2159
             self.assertAlmostEqual(ops[0]['dx'] + ph.CUTOUT_SIDE[1], 100 + want, 3)
 
+    def test_missing_height_label(self):
+        J = ph.Job()
+        ph.build_pole(J, 0, 0, dict(L='L/N', side='R', num='1',
+                                    items=[dict(t='xl', h="27'", label="_'", c=['1/0AT 120V'])]))
+        self.assertEqual([e['text'] for k, h, e in J.edits if h == ph.HDIM[0]], ["_'"])
+
     def test_single_profile_slot(self):
         def P(prof):
             J = ph.build_job(dict(poles=[dict(frame=0, pole='1', profiles=[prof], notes=['-X'])]))
