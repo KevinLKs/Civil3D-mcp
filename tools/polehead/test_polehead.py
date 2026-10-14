@@ -117,7 +117,8 @@ class NewRulesTest(unittest.TestCase):
             self.assertEqual(len(ops), 1)
             self.assertNotIn('mirrorX', ops[0])
             left = it.get('k') == 'R' or it.get('fhla') == 'R'
-            self.assertAlmostEqual(ops[0]['dx'] + ph.CUTOUT_SIDE[1], 100 + (-3.2159 if left else 3.2159), 3)
+            want = {'pri': -3.3132, 'fhla': -3.3132, 'de1': -8.3132}[it['t']] if left else 3.2159
+            self.assertAlmostEqual(ops[0]['dx'] + ph.CUTOUT_SIDE[1], 100 + want, 3)
 
     def test_single_profile_slot(self):
         def P(prof):

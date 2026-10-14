@@ -217,13 +217,14 @@ def assign_rows(items):
 CUTOUT_SIDE = ('2E3872', 5267.7315)                # side view CUTOUT (S), insertion = center, P + 3.2159 in the Builder
 
 
-def cp_fhla(J, P, r, handles, cutout_left):
+def cp_fhla(J, P, r, handles, cutout_left, left_edge=None):
     """Side view SA (+ box) and CUTOUT. The S is NEVER mirrored: with the cutout on the left of the pole the
-    other pieces are mirrored and the S is copied unmirrored to the mirrored spot (center P - 3.2159)."""
+    other pieces are mirrored and the S is copied unmirrored. On the left it sits 1.1 clear of the leftmost box
+    (left_edge, the pole when no box is on that side): center = left_edge - 3.3132."""
     src = SRC['fhla']
     rest = [h for h in handles if h != CUTOUT_SIDE[0]]
     J.cp(rest, P - src['px'], r - src['py'], mirror=P if cutout_left else None)
-    cx = P - 3.2159 if cutout_left else P + 3.2159
+    cx = (P if left_edge is None else left_edge) - 3.3132 if cutout_left else P + 3.2159
     J.cp([CUTOUT_SIDE[0]], cx - CUTOUT_SIDE[1], r - src['py'])
 
 
@@ -298,7 +299,7 @@ def place_item(J, P, r, it, sc):
         a = 30 if sc in dirs else 5
         if it.get('fhla'):
             # SA + CUTOUT on the dead end boxes; fhla 'R' = cutout left, SA right (mirrored)
-            cp_fhla(J, P, r, SRC['fhla_on_box']['h'], it['fhla'] == 'R')
+            cp_fhla(J, P, r, SRC['fhla_on_box']['h'], it['fhla'] == 'R', left_edge=P - 5)   # dead end boxes P - 5 to P + 5
     else:
         raise ValueError('unknown item type %r' % t)
     if it.get('box'):                                      # lone SIDE XARM (guard arm) hanging just below the row line
