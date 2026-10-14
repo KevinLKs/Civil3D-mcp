@@ -98,7 +98,11 @@ SRC = {
     'de2x':   dict(h=['2E3490', '2E3418', '2E3417', '2E3416'], px=4697.5843, py=-1446.6283),
     'sg_l':   dict(h=['2E3466'], px=4371.2932, py=-1992.9099),   # span guy half running LEFT
     'sg_r':   dict(h=['2E3954'], px=4371.2932, py=-1992.9099),   # span guy half running RIGHT
+    'sbox':   dict(h=['2E3912'], px=4697.5843, py=-1446.6283),   # lone SIDE XARM, box pole to pole + 5
 }
+ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.13, +29.76
+ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
+DE1_PINS = ('2E3419', '2E3916')
 SG_LEN = 33.76
 CALLOUT = ('37BBC7', 4558.3319, -1320.0283)      # right justified: right edge, baseline
 HDIM = ('2E34A7', 3329.4667, -1946.2563)         # pole x, ground
@@ -118,6 +122,8 @@ NOTE = dict(box='391E86', hdr=('391EA3', -162.9075), line=('391E99', -170.9346),
 GPS = ('391E87', -263.517, 43.23)
 ELEV = ('391EA0', -283.4196, 14.90)
 TLM = ('392289', 2350.1087, -540.1907)
+TLM_W = 144.5734
+TLMNOTE = dict(box='392285', hdr=('392287', -677.2306), line=('392288', -689.5668), x=2354.3102)
 
 
 def r4(v):
@@ -249,6 +255,12 @@ def place_item(J, P, r, it, sc):
         src = SRC[{'arm2': 'pins2', 'arm4': 'pins4', 'armc': 'circ4'}[t]]
         J.cp(src['h'], P - src['px'], r - src['py'])
         a = 35
+    elif t == 'arm':
+        # crossarm with any mix of pins and conductor circles: pins/circ = slot indexes 0..3 (left to right)
+        src = SRC['arm']
+        hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', [])] + [ARM_CIRC[i] for i in it.get('circ', [])]
+        J.cp(hs, P - src['px'], r - src['py'])
+        a = 35
     elif t in ('fhlaf', 'arm2fl'):
         src = SRC[t]
         J.cp(src['h'], P - src['px'], r - src['py'])
@@ -256,11 +268,22 @@ def place_item(J, P, r, it, sc):
     elif t in ('de1', 'de2'):
         src = SRC['de1']
         hs = src['h'] + (SRC['de2x']['h'] if t == 'de2' else [])
+        if it.get('nopins'):
+            hs = [h for h in hs if h not in DE1_PINS]
         J.cp(hs, P - src['px'], r - src['py'], mirror=P if k == 'L' else None)
         dirs = [1, -1] if t == 'de2' else ([-1] if k == 'L' else [1])
         a = 30 if sc in dirs else 5
+        if it.get('fhla'):
+            # SA + CUTOUT on the dead end boxes; fhla 'R' = cutout left, SA right (mirrored)
+            src = SRC['fhla_on_box']
+            J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['fhla'] == 'R' else None)
     else:
         raise ValueError('unknown item type %r' % t)
+    if it.get('box'):                                      # lone SIDE XARM beside the pole at this row
+        src = SRC['sbox']
+        J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['box'] == 'L' else None)
+        if (1 if it['box'] == 'R' else -1) == sc:
+            a = max(a, 5)
     if t == 'dot' or it.get('dot'):
         src = SRC['dot']
         J.cp(src['h'], P - src['px'], r - src['py'])
@@ -451,8 +474,40 @@ def build_sheet(J, Cx, Cy, sheet):
         ix, iy = Cx + 777.554, Cy + 114.314
         J.cp([TLM[0]], ix - TLM[1], iy - TLM[2], edit=[dict(
             dynamicProperties={'ADDRESS LIST': 'ADDRESS LIST %d' % max(1, len(addr))}, attributes=attr)])
-        if tlm.get('notes'):
-            J.report.append('%s: TLM NOTE box not generated yet; draft it by hand' % sheet['pole'])
+        notes = tlm.get('notes') or []
+        if notes:
+            # box directly under the visible table; same x span as the block
+            n = max(1, len(addr))
+            top = iy - 70.40 - (n - 5) * 11.73
+            tx = ix + 4.20
+            J.cp([TLMNOTE['hdr'][0]], tx - TLMNOTE['x'], (top - 7.98) - TLMNOTE['hdr'][1])
+            yb = top - 20.32
+            for t in notes:
+                J.cp([TLMNOTE['line'][0]], tx - TLMNOTE['x'], yb - TLMNOTE['line'][1], edit=[dict(text=t)])
+                yb -= 8.03
+            bot = yb + 8.03 - 7.40
+            J.cp([TLMNOTE['box']], 0, 0, edit=[dict(vertices=[pt(ix, top), pt(ix + TLM_W, top), pt(ix + TLM_W, bot), pt(ix, bot)])])
+    top = Cy - 100
+    for calc in sheet.get('calcs') or []:
+        top = build_calc(J, Cx, top, calc) - 10
+
+
+def build_calc(J, Cx, top, calc):
+    """DE CALC box from the NOTE stash pieces (DECAL, SIMPLEX 4.8), centered on Cx. Returns the bottom."""
+    rows = calc['rows']
+    w = max([2.876 + note_w(calc['hdr'].replace('%%U', '')) + 3] +
+            [208.34 + note_w(r[1]) + 5.63 if r[1] else 2.876 + note_w(r[0]) + 3 for r in rows])   # re-fit after measuring
+    L = Cx - w / 2
+    J.cp([NOTE['hdr'][0]], L + 2.876 - STASH_TEXT_X, (top - 8.02) - NOTE['hdr'][1], edit=[dict(text=calc['hdr'])])
+    yb = top - 17.65
+    for left, right in rows:
+        J.cp([NOTE['line'][0]], L + 2.876 - STASH_TEXT_X, yb - NOTE['line'][1], edit=[dict(text=left)])
+        if right:
+            J.cp([NOTE['line'][0]], L + 208.34 - STASH_TEXT_X, yb - NOTE['line'][1], edit=[dict(text=right)])
+        yb -= 8.027
+    bot = yb + 8.027 - 4.22
+    J.cp([NOTE['box']], 0, 0, edit=[dict(vertices=[pt(L, top), pt(L + w, top), pt(L + w, bot), pt(L, bot)])])
+    return bot
 
 
 def street_only(address):

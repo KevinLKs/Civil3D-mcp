@@ -53,7 +53,10 @@ for the measure-and-fix pass.
   - `dot` SEC-MISC dot alone (a bare dot with no line).
   - `sg` span guy half, `k` `R` or `L` (never mirrored or edited). `share: 1` puts it on the row of the other item at that whole foot.
   - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm. `arm2fl` 2/C arm with FH and LA.
-  - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways.
+  - `arm` crossarm with any mix: `pins` and `circ` are slot indexes 0 to 3, left to right (-29.76, -12.13, +12.13, +29.76).
+  - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
+    `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
+  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM square beside the pole at that row.
   - `o`: tie-break order for two items at the same height.
 - `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed.
 
@@ -66,8 +69,11 @@ anchor scale from the shortest lead, DG stacking and lift, pole label by guy
 side, CREW/NOTE/GPS/ELEV stack, ELEV as a bare number, TLM street-only
 addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
 
+- Pole `calcs`: `[{"hdr": "%%UUNGUYED DE CALC (7733E)", "rows": [["left", "= right"], ...]}]`, drawn from the NOTE
+  stash pieces, first box top at Cy - 100, each next 10 below. `tlm.notes`: TLM NOTE box under the visible table.
+
 ## Not generated
 
-DE CALC boxes, TLM NOTE boxes and slanted pins are still drafted by hand.
+Slanted pins are still drafted by hand. Calc boxes are estimated: re-fit and re-center them after measuring.
 Note box widths and DG leader ends use text width estimates: measure them after
 the job and fix them in one edit batch.
