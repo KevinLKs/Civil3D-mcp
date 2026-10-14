@@ -108,6 +108,16 @@ class NewRulesTest(unittest.TestCase):
         box = [e for k, h, e in J.edits if h == ph.TLMNOTE['box']][0]
         self.assertAlmostEqual(box['vertices'][0]['y'], iy - ph.TLM_L10_BOTTOM - 2 * ph.TLM_ROW, 3)
 
+    def test_single_profile_slot(self):
+        def P(prof):
+            J = ph.build_job(dict(poles=[dict(frame=0, pole='1', profiles=[prof], notes=['-X'])]))
+            line = [e for k, h, e in J.edits if h == ph.LINE[0]][0]   # pole line starts at (P, G)
+            return line['start']['x'] - ph.COLS[0]
+        base = dict(side='R', items=[dict(t='xb', h="20'", c=['COMM'])])
+        self.assertAlmostEqual(P(dict(base, L='L/N')), -300)
+        self.assertAlmostEqual(P(dict(base, L='L/E')), 300)
+        self.assertAlmostEqual(P(dict(base, L='L/NW', slot='R')), 300)
+
     def test_pick_tlm_extra(self):
         top, bot = -779.9231, -791.6558
         ext = lambda y0, y1: dict(min=dict(x=1854.666, y=y0), max=dict(x=1999.2395, y=y1))
