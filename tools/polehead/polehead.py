@@ -371,7 +371,7 @@ def build_pole(J, P, G, spec):
     for i, it in enumerate(dims):
         dxp = P + sc * (x0 + 12 * i)
         top_y = G + it['row']
-        txt = it['h']
+        txt = it.get('label', it['h'])                   # no planner height: h = drawn spot, label "_'"
         w = label_w(txt)
         mid = (G + top_y) / 2
 

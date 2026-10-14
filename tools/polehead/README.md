@@ -46,7 +46,8 @@ for the measure-and-fix pass.
   goes in the slot the PDF draws it in: N slot (left) Cx - 300, E slot (right) Cx + 300, 600 apart. Set `slot: "R"` or `"L"`;
   without it an `L/E` profile goes right and anything else left.
 - `side`: callout and dim side, `R` or `L`. Callout column: 5.75 past the farthest equipment on the callout side (crossarm 35 -> 40.75, dead end 30 -> 35.75, X COND 25 -> 30.75 minimum). `gside`: guys and anchors side, `1` right, `-1` left (needed when there are anchors).
-- Item `h`: true height as written. `c`: callout lines at the row. `above`: extra lines stacked above the row's own line (FH/LA on a primary box).
+- Item `h`: true height as written. No height from the planner: `h` = where the PDF draws it (for the row) and
+  `label: "_'"` so the dim reads `_'`. `c`: callout lines at the row. `above`: extra lines stacked above the row's own line (FH/LA on a primary box).
 - Item types (`t`) and `k`:
   - `pri` side arm box with pin and X CONDs. `k`: `R`, `L` or `C` box position, `B` a box on each side. `fhla: true` puts the SA and CUTOUT on that box.
   - `fhla` side view FH/LA box. `k: "R"` puts the box right of the pole (default left).
