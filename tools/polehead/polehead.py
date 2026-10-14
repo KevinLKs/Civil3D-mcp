@@ -105,6 +105,7 @@ ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.1
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 DE1_PINS = ('2E3419', '2E3916')
 SG_LEN = 33.76
+COL = {1: 40.75, -1: 35.75}                      # Kevin's callout column: right side P + 40.75, left side P - 35.75
 CALLOUT = ('37BBC7', 4558.3319, -1320.0283)      # right justified: right edge, baseline
 HDIM = ('2E34A7', 3329.4667, -1946.2563)         # pole x, ground
 LDIM = ('38F31B', 3415.3369, -1946.2563)
@@ -299,6 +300,7 @@ def place_item(J, P, r, it, sc):
 
 def build_pole(J, P, G, spec):
     sc = 1 if spec['side'] == 'R' else -1
+    col = COL[sc]                                         # callout column distance from the pole
     items = spec['items']
     assign_rows(items)
     top = 0
@@ -312,10 +314,10 @@ def build_pole(J, P, G, spec):
         it['lines'] = []
         for j, line in enumerate(lines):
             yb = r + 1.6 + 8 * (n_above - j)              # 'above' lines stack over the row's own line
-            J.cp([CALLOUT[0]], (P - 41.27) - CALLOUT[1], yb - CALLOUT[2], mirror=P if sc > 0 else None,
+            J.cp([CALLOUT[0]], (P - col) - CALLOUT[1], yb - CALLOUT[2], mirror=P if sc > 0 else None,
                  edit=[dict(text=line, colorIndex=90) if color_for(line) == 90 else dict(text=line)])
             it['lines'].append((yb, line))
-            x0, x1 = 41.27, 41.27 + callout_w(line)
+            x0, x1 = col, col + callout_w(line)
             texts.append((P + sc * x0, P + sc * x1, yb))
 
     # pole line
@@ -344,7 +346,7 @@ def build_pole(J, P, G, spec):
         for jt in dims:
             if jt['row'] <= it['row']:
                 for (yb, line) in jt['lines']:
-                    e = 41.27 + callout_w(line)
+                    e = col + callout_w(line)
                     if e > ext:
                         ext, beside = e, (jt is it and yb < G + it['row'])
         x0 = max(x0, ext + (4.4 if beside else 1.92) - 12 * i)

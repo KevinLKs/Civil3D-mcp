@@ -43,7 +43,7 @@ for the measure-and-fix pass.
 ```
 
 - `frame` 0 to 11, left to right, top row first. One profile is drawn at Cx - 300, two at Cx -/+ 300 (PDF left, then right).
-- `side`: callout and dim side, `R` or `L`. `gside`: guys and anchors side, `1` right, `-1` left (needed when there are anchors).
+- `side`: callout and dim side, `R` or `L`. Callout column: right P + 40.75 (left justified), left P - 35.75 (right justified). `gside`: guys and anchors side, `1` right, `-1` left (needed when there are anchors).
 - Item `h`: true height as written. `c`: callout lines at the row. `above`: extra lines stacked above the row's own line (FH/LA on a primary box).
 - Item types (`t`) and `k`:
   - `pri` side arm box with pin and X CONDs. `k`: `R`, `L` or `C` box position, `B` a box on each side. `fhla: true` puts the SA and CUTOUT on that box.
