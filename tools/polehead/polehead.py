@@ -691,7 +691,12 @@ def build_job(spec):
         idx = pole['frame']
         Cx, Cy = frame(idx)
         profiles = pole['profiles']
-        xs = [Cx - 300] if len(profiles) == 1 else [Cx - 300, Cx + 300]
+        if len(profiles) == 1:
+            # one profile goes in the slot the PDF draws it in: N slot (left) Cx - 300, E slot (right) Cx + 300
+            slot = profiles[0].get('slot') or ('R' if profiles[0].get('L', '').replace(' ', '').upper() == 'L/E' else 'L')
+            xs = [Cx + 300 if slot == 'R' else Cx - 300]
+        else:
+            xs = [Cx - 300, Cx + 300]
         for P, prof in zip(xs, profiles):
             prof = _copy.deepcopy(prof)
             prof['num'] = pole['pole']
