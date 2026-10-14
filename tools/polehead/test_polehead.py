@@ -108,6 +108,17 @@ class NewRulesTest(unittest.TestCase):
         box = [e for k, h, e in J.edits if h == ph.TLMNOTE['box']][0]
         self.assertAlmostEqual(box['vertices'][0]['y'], iy - ph.TLM_L10_BOTTOM - 2 * ph.TLM_ROW, 3)
 
+    def test_cutout_never_mirrored(self):
+        for it in (dict(t='pri', h="32'", c=['A'], k='R', fhla=True), dict(t='fhla', h="34'", c=['A'], k='R'),
+                   dict(t='de1', h="33'", c=['A'], fhla='R'), dict(t='fhla', h="34'", c=['A'])):
+            J = ph.Job()
+            ph.place_item(J, 100, 0, it, 1)
+            ops = [op for k, op in J.ops if ph.CUTOUT_SIDE[0] in op['handles']]
+            self.assertEqual(len(ops), 1)
+            self.assertNotIn('mirrorX', ops[0])
+            left = it.get('k') == 'R' or it.get('fhla') == 'R'
+            self.assertAlmostEqual(ops[0]['dx'] + ph.CUTOUT_SIDE[1], 100 + (-3.2159 if left else 3.2159), 3)
+
     def test_single_profile_slot(self):
         def P(prof):
             J = ph.build_job(dict(poles=[dict(frame=0, pole='1', profiles=[prof], notes=['-X'])]))
