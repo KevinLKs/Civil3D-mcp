@@ -73,6 +73,8 @@ def label_w(t):        # horizontal dim label width
 
 
 LABEL_H = 5.2
+LABEL_STEP = 8.27     # vertical offset between neighbouring labels that would collide (about 14.5 corner to corner)
+LABEL_GAP = 2.0       # clear space between neighbouring dim labels (0.5 let 23' and 23'6" touch)
 TEXT_H = 4.8
 
 
@@ -99,12 +101,15 @@ SRC = {
     'de2x':   dict(h=['2E3490', '2E3418', '2E3417', '2E3416'], px=4697.5843, py=-1446.6283),
     'sg_l':   dict(h=['2E3466'], px=4371.2932, py=-1992.9099),   # span guy half running LEFT
     'sg_r':   dict(h=['2E3954'], px=4371.2932, py=-1992.9099),   # span guy half running RIGHT
+    'riser':  dict(h=['2A4127'], px=3137.8555, py=-643.5052),   # riser box, 3.4169 wide, ground to TOR
     'sbox':   dict(h=['2E3912'], px=4697.5843, py=-1446.6283),   # lone SIDE XARM, box pole to pole + 5
 }
 ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.13, +29.76
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
+ARM_SLOT_X = [-29.7551, -12.128, 12.128, 29.7551]   # pin / circle slot offsets from the arm center
 DE1_PINS = ('2E3419', '2E3916')
 SG_LEN = 33.76
+RISER_W = 3.4169
 COL_GAP = 5.75                                    # callout column clearance past the farthest equipment
 COL_MIN = 30.75                                   # never closer than an X COND tip (25) + gap
 CALLOUT = ('37BBC7', 4558.3319, -1320.0283)      # right justified: right edge, baseline
@@ -135,6 +140,11 @@ TLM_MAX = 20
 # Query this window (layers MISC) to find the row 12 pieces: TEXT starting ADDRESS (address), TEXT starting METER
 # (meter, center justified on x 1971.588), LWPOLYLINE (open box), LINE (divider). Pass them as spec 'tlm_extra'.
 TLM_EXTRA_WINDOW = dict(minX=1850, minY=-792.5, maxX=2003, maxY=-779.5)
+# RULING SPAN box (template example at 1541.4998, -817.1629, same handles in every template copy):
+# box, underlined header, '-FROM a TO b', ' RULING SPAN = x', ' FINAL SAG = y' (layer DECAL, SIMPLEX 4.8)
+RSPAN = dict(box='3948B8', left=1538.624, top=-807.5353, x=1541.4998,
+             lines=[('3948B9', -815.5629), ('3948BA', -825.19), ('3948BB', -833.217), ('3948BC', -841.2441)],
+             bottom=-844.8897)
 TLMNOTE = dict(box='392285', hdr=('392287', -677.2306), line=('392288', -689.5668), x=2354.3102)
 
 
@@ -254,25 +264,45 @@ def place_item(J, P, r, it, sc):
             J.cp(src['h'], P - src['px'], r - src['py'])
         dirs = {'xr': [1], 'xl': [-1], 'xb': [1, -1]}[t]
         a = 25 if sc in dirs else 0
-    elif t == 'dot':
-        pass                                               # handled by the dot flag below
+    elif t in ('dot', 'none'):
+        pass                                               # dot: handled below; none: only a 'box' (guard arm, comm box)
+    elif t == 'riser':
+        # TOR: riser box from the ground up to its row. k 'C' centered on the pole (pole runs through it in the PDF),
+        # 'R' / 'L' beside the pole touching it.
+        x0 = {'C': -RISER_W / 2, 'R': 0, 'L': -RISER_W}[k]
+        src = SRC['riser']
+        G = it['G']
+        J.cp(src['h'], P - src['px'], G - src['py'], edit=[dict(vertices=[
+            pt(P + x0, r), pt(P + x0 + RISER_W, r), pt(P + x0 + RISER_W, G), pt(P + x0, G)])])
+        a = max(sc * x0, sc * (x0 + RISER_W), 0)
+    elif t == 'qp':
+        # QUEENS POST: a line from the pole out to the anchor distance at its row; guys bend at its end
+        qx = it['qx']
+        J.cp([LINE[0]], P - LINE[1], r - LINE[2], edit=[dict(start=pt(P, r), end=pt(qx, r))])
+        a = abs(qx - P) if (qx - P) * sc > 0 else 0
     elif t == 'sg':
         d = 1 if k == 'R' else -1
         src = SRC['sg_r' if d > 0 else 'sg_l']
         J.cp(src['h'], P - src['px'], r - src['py'])       # never mirrored, never edited
         a = SG_LEN if d == sc else 0
     elif t in ('arm2', 'arm4', 'armc'):
+        # end: 'R' = pole at the arm's right end (arm runs left of the pole), 'L' = pole at its left end
+        sh = {'R': -35, 'L': 35}.get(it.get('end'), 0)
         src = SRC['arm']
-        J.cp(src['h'], P - src['px'], r - src['py'])
+        J.cp(src['h'], P + sh - src['px'], r - src['py'])
         src = SRC[{'arm2': 'pins2', 'arm4': 'pins4', 'armc': 'circ4'}[t]]
-        J.cp(src['h'], P - src['px'], r - src['py'])
-        a = 35
+        J.cp(src['h'], P + sh - src['px'], r - src['py'])
+        a = max(sc * (sh - 35), sc * (sh + 35), 0)
     elif t == 'arm':
         # crossarm with any mix of pins and conductor circles: pins/circ = slot indexes 0..3 (left to right)
+        sh = {'R': -35, 'L': 35}.get(it.get('end'), 0)
         src = SRC['arm']
         hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', [])] + [ARM_CIRC[i] for i in it.get('circ', [])]
-        J.cp(hs, P - src['px'], r - src['py'])
-        a = 35
+        J.cp(hs, P + sh - src['px'], r - src['py'])
+        for i in it.get('dots', []):                   # SEC-MISC dots on the arm (comm / CATV seen end on)
+            d = SRC['dot']
+            J.cp(d['h'], P + sh + ARM_SLOT_X[i] - d['px'], r - d['py'])
+        a = max(sc * (sh - 35), sc * (sh + 35), 0)
     elif t in ('fhlaf', 'arm2fl'):
         src = SRC[t]
         J.cp(src['h'], P - src['px'], r - src['py'])
@@ -296,6 +326,11 @@ def place_item(J, P, r, it, sc):
         J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['box'] == 'L' else None)
         if (1 if it['box'] == 'R' else -1) == sc:
             a = max(a, 5)
+        if it.get('omni'):
+            # INV OMNI CLOSED (2E344E, template orientation): insertion exactly 5 beside the SIDE XARM insertion
+            # (box center P +/- 2.5, row y), on the side the box is on
+            d = 1 if it['box'] == 'R' else -1
+            J.cp(['2E344E'], (P + d * 7.5) - 4580.5129, r - (-1596.6283))
     if t == 'dot' or it.get('dot'):
         src = SRC['dot']
         J.cp(src['h'], P - src['px'], r - src['py'])
@@ -306,9 +341,22 @@ def build_pole(J, P, G, spec):
     sc = 1 if spec['side'] == 'R' else -1
     items = spec['items']
     assign_rows(items)
+    anchors = spec.get('anchors', [])
+    gs = spec.get('gside', 0)
+    if anchors:
+        if gs == 0:
+            raise ValueError('pole %s: anchors need gside +1 or -1' % spec.get('num'))
+        short = min(int(ft(a['L'])) for a in anchors)
+        for a in anchors:
+            a['x'] = P + gs * (anchor_base(short) + 4 * (int(ft(a['L'])) - short))
+    for it in items:
+        if it['t'] == 'qp':     # QP length = its anchor's distance unless the planner gives its own 'L'
+            it['qx'] = (P + gs * (anchor_base(short) + 4 * (int(ft(it['L'])) - short))) if it.get('L') \
+                else anchors[it.get('an', 0)]['x']
     top = 0
     texts = []           # callout text boxes (x0, x1, baseline)
     for it in items:
+        it['G'] = G
         it['a'] = place_item(J, P, G + it['row'], it, sc)
         top = max(top, it['row'])
     # callout column: 5.75 past the farthest equipment on the callout side (arm 35 -> 40.75, dead end 30 -> 35.75)
@@ -330,14 +378,7 @@ def build_pole(J, P, G, spec):
     J.cp([LINE[0]], P - LINE[1], G - LINE[2], edit=[dict(start=pt(P, G), end=pt(P, G + top))])
 
     # anchors decide the base line
-    anchors = spec.get('anchors', [])
-    gs = spec.get('gside', 0)
     if anchors:
-        if gs == 0:
-            raise ValueError('pole %s: anchors need gside +1 or -1' % spec.get('num'))
-        short = min(int(ft(a['L'])) for a in anchors)
-        for a in anchors:
-            a['x'] = P + gs * (anchor_base(short) + 4 * (int(ft(a['L'])) - short))
         fx = max(abs(a['x'] - P) for a in anchors) + 2
         b0, b1 = (P - 17.5, P + fx) if gs > 0 else (P - fx, P + 17.5)
     else:
@@ -356,31 +397,14 @@ def build_pole(J, P, G, spec):
                     if e > ext:
                         ext, beside = e, (jt is it and yb < G + it['row'])
         x0 = max(x0, ext + (4.4 if beside else 1.92) - 12 * i)
-    labels = []
+    tys, bad = place_labels(dims, G, P, sc, x0, texts)
+    for i in bad:
+        J.report.append('%s: dim label %s could not clear its neighbours; check it' % (spec.get('num'), dims[i]['h']))
     for i, it in enumerate(dims):
         dxp = P + sc * (x0 + 12 * i)
         top_y = G + it['row']
         txt = it['h']
-        w = label_w(txt)
-        mid = (G + top_y) / 2
-
-        def clash(ty):
-            for (lx, ly, lw) in labels:
-                if abs(dxp - lx) < (w + lw) / 2 + 0.5 and abs(ty - ly) < LABEL_H + 1:
-                    return True
-            for (tx0, tx1, yb) in texts:
-                lo, hi = min(tx0, tx1), max(tx0, tx1)
-                if dxp + w / 2 > lo - 0.5 and dxp - w / 2 < hi + 0.5 and \
-                        ty - LABEL_H / 2 < yb + TEXT_H + 1 and ty + LABEL_H / 2 > yb - 1:
-                    return True
-            return False
-
-        ty = mid
-        while clash(ty) and ty + 8 + LABEL_H / 2 <= top_y:
-            ty += 8
-        if clash(ty):
-            J.report.append('%s: dim label %s could not clear its neighbours; check it' % (spec.get('num'), txt))
-        labels.append((dxp, ty, w))
+        ty = tys[i]
         J.cp([HDIM[0]], P - HDIM[1], G - HDIM[2], edit=[dict(
             xLine1=pt(P + sc * it['a'], top_y), xLine2=pt(P, G), dimLine=pt(dxp, G),
             text=txt, textPosition=pt(dxp, ty), layer='DIMENSION', colorIndex=256)])
@@ -393,17 +417,33 @@ def build_pole(J, P, G, spec):
             J.cp([LDIM[0]], P - LDIM[1], G - LDIM[2], edit=[dict(
                 xLine1=pt(a['x'], G), xLine2=pt(P, G), dimLine=pt(P, G - 12 * (i + 1)),
                 text=a['L'].replace(' ', ''), layer='DIMENSION', colorIndex=256)])
-        rowof = {}
+        rowof, exact = {}, {}
         for it in items:
             rowof.setdefault(int(ft(it['h'])), it['row'])
+            exact.setdefault(ft(it['h']), it['row'])
+        qps = [it for it in items if it['t'] == 'qp']
         guys = spec.get('guys', [])
         for g in guys:
             hf = int(ft(g['h']))
-            g['ya'] = G + rowof.get(hf, pos(hf))
+            # exact height first (DG @ 22'6" at the 22'6" row), then the whole foot, then its own position
+            g['ya'] = G + exact.get(ft(g['h']), rowof.get(hf, pos(hf)))
             g['ax'] = anchors[g['an']]['x']
-            J.cp([GUY[0]], P - GUY[1], g['ya'] - GUY[2], edit=[dict(vertices=[pt(P, g['ya']), pt(g['ax'], G)])])
+            if g.get('via') is not None:            # guy to the QUEENS POST end, then on to the anchor
+                q = qps[g['via']]
+                g['q'] = (q['qx'], G + q['row'])
+                J.cp([GUY[0]], P - GUY[1], g['ya'] - GUY[2], edit=[dict(vertices=[pt(P, g['ya']), pt(*g['q'])])])
+            else:
+                J.cp([GUY[0]], P - GUY[1], g['ya'] - GUY[2], edit=[dict(vertices=[pt(P, g['ya']), pt(g['ax'], G)])])
+        for q in qps:                                # one guy from the QP end down to its anchor
+            ax = anchors[q.get('an', 0)]['x']
+            J.cp([GUY[0]], P - GUY[1], G + q['row'] - GUY[2], edit=[dict(vertices=[pt(q['qx'], G + q['row']), pt(ax, G)])])
 
         def gx(g, y):
+            if 'q' in g:
+                qx, qy = g['q']
+                if y >= qy:
+                    return P + (qx - P) * (g['ya'] - y) / (g['ya'] - qy)
+                return qx + (g['ax'] - qx) * (qy - y) / (qy - G)
             return P + (g['ax'] - P) * (g['ya'] - y) / (g['ya'] - G)
 
         gl = sorted(guys, key=lambda g: -g['ya'])
@@ -422,6 +462,8 @@ def build_pole(J, P, G, spec):
             endx = nx - gs * 2.8
             elb = endx - gs * 3
             ay = min(yt + 3 + 8, g['ya'] - 4)
+            if 'q' in g:
+                ay = max(ay, g['q'][1] + 4)          # arrow on the upper run, above the QP
             J.cp([LEADER[0]], P - LEADER[1], yt - LEADER[2], edit=[dict(
                 vertices=[pt(gx(g, ay), ay), pt(elb, yt + 3), pt(endx, yt + 3)])])
         far_a = anchors[-1]
@@ -441,6 +483,58 @@ def build_pole(J, P, G, spec):
     for k, ((h, sx, sy), t) in enumerate(zip(LBL, ['PROPOSED', spec['L'], spec['num']])):
         J.cp([h], cx - sx, (G - 11.08 - 8 * k) - sy, edit=[dict(text=t)] if k else None)
     return top
+
+
+def place_labels(dims, G, P, sc, x0, texts):
+    """Horizontal dim labels, inner dim first. Each label sits at its dim's midpoint, but always at least LABEL_STEP
+    above the label inside it (14.5 corner to corner; neighbours are never level). Labels also
+    step clear of callout text. When a staircase would run past a dim's top, the first label of that run is lowered
+    below its midpoint (down to just above ground) so the whole run fits. Returns (y list, indexes still clashing)."""
+    n = len(dims)
+    xs = [P + sc * (x0 + 12 * i) for i in range(n)]
+    ws = [label_w(d['h']) for d in dims]
+    mids = [(2 * G + d['row']) / 2 for d in dims]
+    tops = [G + d['row'] - LABEL_H / 2 - 1 for d in dims]
+    floor = G + LABEL_H / 2 + 1.5
+    drop = [0.0] * n
+
+    def on_text(i, ty):
+        for (tx0, tx1, yb) in texts:
+            lo, hi = min(tx0, tx1), max(tx0, tx1)
+            if xs[i] + ws[i] / 2 > lo - 0.5 and xs[i] - ws[i] / 2 < hi + 0.5 and \
+                    ty - LABEL_H / 2 < yb + TEXT_H + 1 and ty + LABEL_H / 2 > yb - 1:
+                return True
+        return False
+
+    def hits(i, j, ti, tj):
+        return abs(xs[i] - xs[j]) < (ws[i] + ws[j]) / 2 + LABEL_GAP and abs(ti - tj) < LABEL_STEP - 0.01
+
+    for _ in range(60):
+        ty, start = [], []
+        for i in range(n):
+            y, s0 = mids[i] - drop[i], i
+            if i:                                       # always at least LABEL_STEP above the label inside it
+                if ty[i - 1] + LABEL_STEP > y:
+                    y, s0 = ty[i - 1] + LABEL_STEP, start[i - 1]
+            y = max(y, ty[i - 1] if i else y)          # never below the label inside it
+            k = 0
+            while (on_text(i, y) or any(hits(i, j, y, ty[j]) for j in range(i))) and k < 40:
+                y += 1
+                k += 1
+            ty.append(y)
+            start.append(s0)
+        over = [(ty[i] - tops[i], i) for i in range(n) if ty[i] > tops[i] + 0.01]
+        if not over:
+            break
+        o, i = max(over)
+        j = start[i]
+        room = mids[j] - drop[j] - floor
+        if room <= 0.01:
+            break
+        drop[j] += min(o, room)
+    bad = [i for i in range(n) if ty[i] > tops[i] + 0.01 or on_text(i, ty[i]) or
+           any(hits(i, j, ty[i], ty[j]) for j in range(n) if j != i)]
+    return ty, bad
 
 
 # ------------------------------------------------------------------ sheet data
@@ -507,6 +601,21 @@ def build_sheet(J, Cx, Cy, sheet):
     top = Cy - 100
     for calc in sheet.get('calcs') or []:
         top = build_calc(J, Cx, top, calc) - 10
+    for rs in sheet.get('rspans') or []:            # RULING SPAN boxes under the calcs
+        top = build_rspan(J, Cx, top, rs) - 10
+
+
+def build_rspan(J, Cx, top, rs):
+    """rs = [from pole, to pole, ruling span, final sag] as written. Centered on Cx; returns the bottom."""
+    lines = ['%%URULING SPAN:', '-FROM %s TO %s' % (rs[0], rs[1]), ' RULING SPAN = %s' % rs[2], ' FINAL SAG = %s' % rs[3]]
+    w = 2.876 + max(note_w(t.replace('%%U', '')) for t in lines) + 3        # re-fit after measuring
+    L = Cx - w / 2
+    dy = top - RSPAN['top']
+    for (h, yb), t in zip(RSPAN['lines'], lines):
+        J.cp([h], L + 2.876 - RSPAN['x'], (yb + dy) - yb, edit=[dict(text=t)] if not t.startswith('%%U') else None)
+    bot = RSPAN['bottom'] + dy
+    J.cp([RSPAN['box']], 0, 0, edit=[dict(vertices=[pt(L, top), pt(L + w, top), pt(L + w, bot), pt(L, bot)])])
+    return bot
 
 
 def build_calc(J, Cx, top, calc):
