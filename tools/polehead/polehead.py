@@ -73,7 +73,7 @@ def label_w(t):        # horizontal dim label width
 
 
 LABEL_H = 5.2
-DENSE_RUN = 6         # dims in a row with colliding labels before the stack becomes a staircase
+LABEL_STEP = 8.27     # vertical offset between neighbouring labels that would collide (about 14.5 corner to corner)
 LABEL_GAP = 2.0       # clear space between neighbouring dim labels (0.5 let 23' and 23'6" touch)
 TEXT_H = 4.8
 
@@ -385,43 +385,14 @@ def build_pole(J, P, G, spec):
                     if e > ext:
                         ext, beside = e, (jt is it and yb < G + it['row'])
         x0 = max(x0, ext + (4.4 if beside else 1.92) - 12 * i)
-    labels = []
-    # Dense stack: some label would hit its inner neighbour at its own midpoint. Then the whole stack becomes a
-    # staircase (each label 8 above the one inside it) instead of a zigzag of single step-ups.
-    # Only for really dense stacks: DENSE_RUN or more dims in a row whose labels would collide.
-    run = best = 1
-    for i in range(1, len(dims)):
-        w0, w1 = label_w(dims[i - 1]['h']), label_w(dims[i]['h'])
-        m0, m1 = dims[i - 1]['row'] / 2, dims[i]['row'] / 2
-        run = run + 1 if 12 < (w0 + w1) / 2 + LABEL_GAP and abs(m1 - m0) < LABEL_H + 1 else 1
-        best = max(best, run)
-    dense = best >= DENSE_RUN
+    tys, bad = place_labels(dims, G, P, sc, x0, texts)
+    for i in bad:
+        J.report.append('%s: dim label %s could not clear its neighbours; check it' % (spec.get('num'), dims[i]['h']))
     for i, it in enumerate(dims):
         dxp = P + sc * (x0 + 12 * i)
         top_y = G + it['row']
         txt = it['h']
-        w = label_w(txt)
-        mid = (G + top_y) / 2
-
-        def clash(ty):
-            for (lx, ly, lw) in labels:
-                if abs(dxp - lx) < (w + lw) / 2 + LABEL_GAP and abs(ty - ly) < LABEL_H + 1:
-                    return True
-            for (tx0, tx1, yb) in texts:
-                lo, hi = min(tx0, tx1), max(tx0, tx1)
-                if dxp + w / 2 > lo - 0.5 and dxp - w / 2 < hi + 0.5 and \
-                        ty - LABEL_H / 2 < yb + TEXT_H + 1 and ty + LABEL_H / 2 > yb - 1:
-                    return True
-            return False
-
-        ty = mid
-        if dense and labels:
-            ty = max(ty, labels[-1][1] + 8)       # dense stack: labels climb 8 per dim, never below the inner one
-        while clash(ty) and ty + 8 + LABEL_H / 2 <= top_y:
-            ty += 8
-        if clash(ty):
-            J.report.append('%s: dim label %s could not clear its neighbours; check it' % (spec.get('num'), txt))
-        labels.append((dxp, ty, w))
+        ty = tys[i]
         J.cp([HDIM[0]], P - HDIM[1], G - HDIM[2], edit=[dict(
             xLine1=pt(P + sc * it['a'], top_y), xLine2=pt(P, G), dimLine=pt(dxp, G),
             text=txt, textPosition=pt(dxp, ty), layer='DIMENSION', colorIndex=256)])
@@ -500,6 +471,58 @@ def build_pole(J, P, G, spec):
     for k, ((h, sx, sy), t) in enumerate(zip(LBL, ['PROPOSED', spec['L'], spec['num']])):
         J.cp([h], cx - sx, (G - 11.08 - 8 * k) - sy, edit=[dict(text=t)] if k else None)
     return top
+
+
+def place_labels(dims, G, P, sc, x0, texts):
+    """Horizontal dim labels, inner dim first. Each label sits at its dim's midpoint unless it would hit the label
+    inside it: then it sits LABEL_STEP above that one (a tight staircase, never below the inner label). Labels also
+    step clear of callout text. When a staircase would run past a dim's top, the first label of that run is lowered
+    below its midpoint (down to just above ground) so the whole run fits. Returns (y list, indexes still clashing)."""
+    n = len(dims)
+    xs = [P + sc * (x0 + 12 * i) for i in range(n)]
+    ws = [label_w(d['h']) for d in dims]
+    mids = [(2 * G + d['row']) / 2 for d in dims]
+    tops = [G + d['row'] - LABEL_H / 2 - 1 for d in dims]
+    floor = G + LABEL_H / 2 + 1.5
+    drop = [0.0] * n
+
+    def on_text(i, ty):
+        for (tx0, tx1, yb) in texts:
+            lo, hi = min(tx0, tx1), max(tx0, tx1)
+            if xs[i] + ws[i] / 2 > lo - 0.5 and xs[i] - ws[i] / 2 < hi + 0.5 and \
+                    ty - LABEL_H / 2 < yb + TEXT_H + 1 and ty + LABEL_H / 2 > yb - 1:
+                return True
+        return False
+
+    def hits(i, j, ti, tj):
+        return abs(xs[i] - xs[j]) < (ws[i] + ws[j]) / 2 + LABEL_GAP and abs(ti - tj) < LABEL_STEP - 0.01
+
+    for _ in range(60):
+        ty, start = [], []
+        for i in range(n):
+            y, s0 = mids[i] - drop[i], i
+            if i and abs(xs[i] - xs[i - 1]) < (ws[i] + ws[i - 1]) / 2 + LABEL_GAP:
+                if ty[i - 1] + LABEL_STEP > y:
+                    y, s0 = ty[i - 1] + LABEL_STEP, start[i - 1]
+            y = max(y, ty[i - 1] if i else y)          # never below the label inside it
+            k = 0
+            while (on_text(i, y) or any(hits(i, j, y, ty[j]) for j in range(i))) and k < 40:
+                y += 1
+                k += 1
+            ty.append(y)
+            start.append(s0)
+        over = [(ty[i] - tops[i], i) for i in range(n) if ty[i] > tops[i] + 0.01]
+        if not over:
+            break
+        o, i = max(over)
+        j = start[i]
+        room = mids[j] - drop[j] - floor
+        if room <= 0.01:
+            break
+        drop[j] += min(o, room)
+    bad = [i for i in range(n) if ty[i] > tops[i] + 0.01 or on_text(i, ty[i]) or
+           any(hits(i, j, ty[i], ty[j]) for j in range(n) if j != i)]
+    return ty, bad
 
 
 # ------------------------------------------------------------------ sheet data
