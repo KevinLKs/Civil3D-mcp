@@ -101,12 +101,14 @@ SRC = {
     'de2x':   dict(h=['2E3490', '2E3418', '2E3417', '2E3416'], px=4697.5843, py=-1446.6283),
     'sg_l':   dict(h=['2E3466'], px=4371.2932, py=-1992.9099),   # span guy half running LEFT
     'sg_r':   dict(h=['2E3954'], px=4371.2932, py=-1992.9099),   # span guy half running RIGHT
+    'riser':  dict(h=['2A4127'], px=3137.8555, py=-643.5052),   # riser box, 3.4169 wide, ground to TOR
     'sbox':   dict(h=['2E3912'], px=4697.5843, py=-1446.6283),   # lone SIDE XARM, box pole to pole + 5
 }
 ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.13, +29.76
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 DE1_PINS = ('2E3419', '2E3916')
 SG_LEN = 33.76
+RISER_W = 3.4169
 COL_GAP = 5.75                                    # callout column clearance past the farthest equipment
 COL_MIN = 30.75                                   # never closer than an X COND tip (25) + gap
 CALLOUT = ('37BBC7', 4558.3319, -1320.0283)      # right justified: right edge, baseline
@@ -263,6 +265,15 @@ def place_item(J, P, r, it, sc):
         a = 25 if sc in dirs else 0
     elif t in ('dot', 'none'):
         pass                                               # dot: handled below; none: only a 'box' (guard arm, comm box)
+    elif t == 'riser':
+        # TOR: riser box from the ground up to its row. k 'C' centered on the pole (pole runs through it in the PDF),
+        # 'R' / 'L' beside the pole touching it.
+        x0 = {'C': -RISER_W / 2, 'R': 0, 'L': -RISER_W}[k]
+        src = SRC['riser']
+        G = it['G']
+        J.cp(src['h'], P - src['px'], G - src['py'], edit=[dict(vertices=[
+            pt(P + x0, r), pt(P + x0 + RISER_W, r), pt(P + x0 + RISER_W, G), pt(P + x0, G)])])
+        a = max(sc * x0, sc * (x0 + RISER_W), 0)
     elif t == 'qp':
         # QUEENS POST: a line from the pole out to the anchor distance at its row; guys bend at its end
         qx = it['qx']
@@ -333,6 +344,7 @@ def build_pole(J, P, G, spec):
     top = 0
     texts = []           # callout text boxes (x0, x1, baseline)
     for it in items:
+        it['G'] = G
         it['a'] = place_item(J, P, G + it['row'], it, sc)
         top = max(top, it['row'])
     # callout column: 5.75 past the farthest equipment on the callout side (arm 35 -> 40.75, dead end 30 -> 35.75)
