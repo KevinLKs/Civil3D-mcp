@@ -57,7 +57,7 @@ for the measure-and-fix pass.
   - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
     `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
   - `box: "R"` / `"L"` on any item adds a lone SIDE XARM square beside the pole at that row.
-  - `omni: true` with `box`: INV OMNI CLOSED hung from the box's outer bottom corner (HZ INV OMNI SW).
+  - `omni: true` with `box`: INV OMNI CLOSED with its insertion 5 beside the SIDE XARM insertion, on the box's side (HZ INV OMNI SW).
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
   - `riser` TOR: riser box (2A4127) from the ground to its row, `k` `C` centered on the pole (pole runs through it), `R`/`L` beside it. Callout `TOR`.
   - `qp` QUEENS POST: a line at its row from the pole out to its anchor's distance (`an`, or its own `L`). Guys with
