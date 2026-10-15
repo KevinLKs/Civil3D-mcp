@@ -474,8 +474,8 @@ def build_pole(J, P, G, spec):
 
 
 def place_labels(dims, G, P, sc, x0, texts):
-    """Horizontal dim labels, inner dim first. Each label sits at its dim's midpoint unless it would hit the label
-    inside it: then it sits LABEL_STEP above that one (a tight staircase, never below the inner label). Labels also
+    """Horizontal dim labels, inner dim first. Each label sits at its dim's midpoint, but always at least LABEL_STEP
+    above the label inside it (14.5 corner to corner; neighbours are never level). Labels also
     step clear of callout text. When a staircase would run past a dim's top, the first label of that run is lowered
     below its midpoint (down to just above ground) so the whole run fits. Returns (y list, indexes still clashing)."""
     n = len(dims)
@@ -501,7 +501,7 @@ def place_labels(dims, G, P, sc, x0, texts):
         ty, start = [], []
         for i in range(n):
             y, s0 = mids[i] - drop[i], i
-            if i and abs(xs[i] - xs[i - 1]) < (ws[i] + ws[i - 1]) / 2 + LABEL_GAP:
+            if i:                                       # always at least LABEL_STEP above the label inside it
                 if ty[i - 1] + LABEL_STEP > y:
                     y, s0 = ty[i - 1] + LABEL_STEP, start[i - 1]
             y = max(y, ty[i - 1] if i else y)          # never below the label inside it
