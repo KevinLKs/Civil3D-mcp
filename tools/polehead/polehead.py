@@ -106,6 +106,7 @@ SRC = {
 }
 ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.13, +29.76
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
+ARM_SLOT_X = [-29.7551, -12.128, 12.128, 29.7551]   # pin / circle slot offsets from the arm center
 DE1_PINS = ('2E3419', '2E3916')
 SG_LEN = 33.76
 RISER_W = 3.4169
@@ -298,6 +299,9 @@ def place_item(J, P, r, it, sc):
         src = SRC['arm']
         hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', [])] + [ARM_CIRC[i] for i in it.get('circ', [])]
         J.cp(hs, P + sh - src['px'], r - src['py'])
+        for i in it.get('dots', []):                   # SEC-MISC dots on the arm (comm / CATV seen end on)
+            d = SRC['dot']
+            J.cp(d['h'], P + sh + ARM_SLOT_X[i] - d['px'], r - d['py'])
         a = max(sc * (sh - 35), sc * (sh + 35), 0)
     elif t in ('fhlaf', 'arm2fl'):
         src = SRC[t]
