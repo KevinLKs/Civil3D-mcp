@@ -319,6 +319,10 @@ def place_item(J, P, r, it, sc):
         J.cp(src['h'], P - src['px'], r - src['py'], mirror=P if it['box'] == 'L' else None)
         if (1 if it['box'] == 'R' else -1) == sc:
             a = max(a, 5)
+        if it.get('omni'):
+            # INV OMNI CLOSED (2E344E, template orientation) hung from the box's outer bottom corner
+            d = 1 if it['box'] == 'R' else -1
+            J.cp(['2E344E'], (P + d * 5) - 4580.5129, (r - 2.5) - (-1596.6283))
     if t == 'dot' or it.get('dot'):
         src = SRC['dot']
         J.cp(src['h'], P - src['px'], r - src['py'])
