@@ -73,6 +73,7 @@ def label_w(t):        # horizontal dim label width
 
 
 LABEL_H = 5.2
+LABEL_GAP = 2.0       # clear space between neighbouring dim labels (0.5 let 23' and 23'6" touch)
 TEXT_H = 4.8
 
 
@@ -381,7 +382,7 @@ def build_pole(J, P, G, spec):
 
         def clash(ty):
             for (lx, ly, lw) in labels:
-                if abs(dxp - lx) < (w + lw) / 2 + 0.5 and abs(ty - ly) < LABEL_H + 1:
+                if abs(dxp - lx) < (w + lw) / 2 + LABEL_GAP and abs(ty - ly) < LABEL_H + 1:
                     return True
             for (tx0, tx1, yb) in texts:
                 lo, hi = min(tx0, tx1), max(tx0, tx1)
