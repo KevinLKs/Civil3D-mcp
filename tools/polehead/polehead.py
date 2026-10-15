@@ -73,6 +73,7 @@ def label_w(t):        # horizontal dim label width
 
 
 LABEL_H = 5.2
+DENSE_RUN = 6         # dims in a row with colliding labels before the stack becomes a staircase
 LABEL_GAP = 2.0       # clear space between neighbouring dim labels (0.5 let 23' and 23'6" touch)
 TEXT_H = 4.8
 
@@ -373,6 +374,16 @@ def build_pole(J, P, G, spec):
                         ext, beside = e, (jt is it and yb < G + it['row'])
         x0 = max(x0, ext + (4.4 if beside else 1.92) - 12 * i)
     labels = []
+    # Dense stack: some label would hit its inner neighbour at its own midpoint. Then the whole stack becomes a
+    # staircase (each label 8 above the one inside it) instead of a zigzag of single step-ups.
+    # Only for really dense stacks: DENSE_RUN or more dims in a row whose labels would collide.
+    run = best = 1
+    for i in range(1, len(dims)):
+        w0, w1 = label_w(dims[i - 1]['h']), label_w(dims[i]['h'])
+        m0, m1 = dims[i - 1]['row'] / 2, dims[i]['row'] / 2
+        run = run + 1 if 12 < (w0 + w1) / 2 + LABEL_GAP and abs(m1 - m0) < LABEL_H + 1 else 1
+        best = max(best, run)
+    dense = best >= DENSE_RUN
     for i, it in enumerate(dims):
         dxp = P + sc * (x0 + 12 * i)
         top_y = G + it['row']
@@ -392,6 +403,8 @@ def build_pole(J, P, G, spec):
             return False
 
         ty = mid
+        if dense and labels:
+            ty = max(ty, labels[-1][1] + 8)       # dense stack: labels climb 8 per dim, never below the inner one
         while clash(ty) and ty + 8 + LABEL_H / 2 <= top_y:
             ty += 8
         if clash(ty):
