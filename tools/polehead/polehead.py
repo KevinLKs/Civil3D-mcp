@@ -285,17 +285,20 @@ def place_item(J, P, r, it, sc):
         J.cp(src['h'], P - src['px'], r - src['py'])       # never mirrored, never edited
         a = SG_LEN if d == sc else 0
     elif t in ('arm2', 'arm4', 'armc'):
+        # end: 'R' = pole at the arm's right end (arm runs left of the pole), 'L' = pole at its left end
+        sh = {'R': -35, 'L': 35}.get(it.get('end'), 0)
         src = SRC['arm']
-        J.cp(src['h'], P - src['px'], r - src['py'])
+        J.cp(src['h'], P + sh - src['px'], r - src['py'])
         src = SRC[{'arm2': 'pins2', 'arm4': 'pins4', 'armc': 'circ4'}[t]]
-        J.cp(src['h'], P - src['px'], r - src['py'])
-        a = 35
+        J.cp(src['h'], P + sh - src['px'], r - src['py'])
+        a = max(sc * (sh - 35), sc * (sh + 35), 0)
     elif t == 'arm':
         # crossarm with any mix of pins and conductor circles: pins/circ = slot indexes 0..3 (left to right)
+        sh = {'R': -35, 'L': 35}.get(it.get('end'), 0)
         src = SRC['arm']
         hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', [])] + [ARM_CIRC[i] for i in it.get('circ', [])]
-        J.cp(hs, P - src['px'], r - src['py'])
-        a = 35
+        J.cp(hs, P + sh - src['px'], r - src['py'])
+        a = max(sc * (sh - 35), sc * (sh + 35), 0)
     elif t in ('fhlaf', 'arm2fl'):
         src = SRC[t]
         J.cp(src['h'], P - src['px'], r - src['py'])
