@@ -135,6 +135,11 @@ TLM_MAX = 20
 # Query this window (layers MISC) to find the row 12 pieces: TEXT starting ADDRESS (address), TEXT starting METER
 # (meter, center justified on x 1971.588), LWPOLYLINE (open box), LINE (divider). Pass them as spec 'tlm_extra'.
 TLM_EXTRA_WINDOW = dict(minX=1850, minY=-792.5, maxX=2003, maxY=-779.5)
+# RULING SPAN box (template example at 1541.4998, -817.1629, same handles in every template copy):
+# box, underlined header, '-FROM a TO b', ' RULING SPAN = x', ' FINAL SAG = y' (layer DECAL, SIMPLEX 4.8)
+RSPAN = dict(box='3948B8', left=1538.624, top=-807.5353, x=1541.4998,
+             lines=[('3948B9', -815.5629), ('3948BA', -825.19), ('3948BB', -833.217), ('3948BC', -841.2441)],
+             bottom=-844.8897)
 TLMNOTE = dict(box='392285', hdr=('392287', -677.2306), line=('392288', -689.5668), x=2354.3102)
 
 
@@ -254,8 +259,13 @@ def place_item(J, P, r, it, sc):
             J.cp(src['h'], P - src['px'], r - src['py'])
         dirs = {'xr': [1], 'xl': [-1], 'xb': [1, -1]}[t]
         a = 25 if sc in dirs else 0
-    elif t == 'dot':
-        pass                                               # handled by the dot flag below
+    elif t in ('dot', 'none'):
+        pass                                               # dot: handled below; none: only a 'box' (guard arm, comm box)
+    elif t == 'qp':
+        # QUEENS POST: a line from the pole out to the anchor distance at its row; guys bend at its end
+        qx = it['qx']
+        J.cp([LINE[0]], P - LINE[1], r - LINE[2], edit=[dict(start=pt(P, r), end=pt(qx, r))])
+        a = abs(qx - P) if (qx - P) * sc > 0 else 0
     elif t == 'sg':
         d = 1 if k == 'R' else -1
         src = SRC['sg_r' if d > 0 else 'sg_l']
@@ -306,6 +316,18 @@ def build_pole(J, P, G, spec):
     sc = 1 if spec['side'] == 'R' else -1
     items = spec['items']
     assign_rows(items)
+    anchors = spec.get('anchors', [])
+    gs = spec.get('gside', 0)
+    if anchors:
+        if gs == 0:
+            raise ValueError('pole %s: anchors need gside +1 or -1' % spec.get('num'))
+        short = min(int(ft(a['L'])) for a in anchors)
+        for a in anchors:
+            a['x'] = P + gs * (anchor_base(short) + 4 * (int(ft(a['L'])) - short))
+    for it in items:
+        if it['t'] == 'qp':     # QP length = its anchor's distance unless the planner gives its own 'L'
+            it['qx'] = (P + gs * (anchor_base(short) + 4 * (int(ft(it['L'])) - short))) if it.get('L') \
+                else anchors[it.get('an', 0)]['x']
     top = 0
     texts = []           # callout text boxes (x0, x1, baseline)
     for it in items:
@@ -330,14 +352,7 @@ def build_pole(J, P, G, spec):
     J.cp([LINE[0]], P - LINE[1], G - LINE[2], edit=[dict(start=pt(P, G), end=pt(P, G + top))])
 
     # anchors decide the base line
-    anchors = spec.get('anchors', [])
-    gs = spec.get('gside', 0)
     if anchors:
-        if gs == 0:
-            raise ValueError('pole %s: anchors need gside +1 or -1' % spec.get('num'))
-        short = min(int(ft(a['L'])) for a in anchors)
-        for a in anchors:
-            a['x'] = P + gs * (anchor_base(short) + 4 * (int(ft(a['L'])) - short))
         fx = max(abs(a['x'] - P) for a in anchors) + 2
         b0, b1 = (P - 17.5, P + fx) if gs > 0 else (P - fx, P + 17.5)
     else:
@@ -393,17 +408,33 @@ def build_pole(J, P, G, spec):
             J.cp([LDIM[0]], P - LDIM[1], G - LDIM[2], edit=[dict(
                 xLine1=pt(a['x'], G), xLine2=pt(P, G), dimLine=pt(P, G - 12 * (i + 1)),
                 text=a['L'].replace(' ', ''), layer='DIMENSION', colorIndex=256)])
-        rowof = {}
+        rowof, exact = {}, {}
         for it in items:
             rowof.setdefault(int(ft(it['h'])), it['row'])
+            exact.setdefault(ft(it['h']), it['row'])
+        qps = [it for it in items if it['t'] == 'qp']
         guys = spec.get('guys', [])
         for g in guys:
             hf = int(ft(g['h']))
-            g['ya'] = G + rowof.get(hf, pos(hf))
+            # exact height first (DG @ 22'6" at the 22'6" row), then the whole foot, then its own position
+            g['ya'] = G + exact.get(ft(g['h']), rowof.get(hf, pos(hf)))
             g['ax'] = anchors[g['an']]['x']
-            J.cp([GUY[0]], P - GUY[1], g['ya'] - GUY[2], edit=[dict(vertices=[pt(P, g['ya']), pt(g['ax'], G)])])
+            if g.get('via') is not None:            # guy to the QUEENS POST end, then on to the anchor
+                q = qps[g['via']]
+                g['q'] = (q['qx'], G + q['row'])
+                J.cp([GUY[0]], P - GUY[1], g['ya'] - GUY[2], edit=[dict(vertices=[pt(P, g['ya']), pt(*g['q'])])])
+            else:
+                J.cp([GUY[0]], P - GUY[1], g['ya'] - GUY[2], edit=[dict(vertices=[pt(P, g['ya']), pt(g['ax'], G)])])
+        for q in qps:                                # one guy from the QP end down to its anchor
+            ax = anchors[q.get('an', 0)]['x']
+            J.cp([GUY[0]], P - GUY[1], G + q['row'] - GUY[2], edit=[dict(vertices=[pt(q['qx'], G + q['row']), pt(ax, G)])])
 
         def gx(g, y):
+            if 'q' in g:
+                qx, qy = g['q']
+                if y >= qy:
+                    return P + (qx - P) * (g['ya'] - y) / (g['ya'] - qy)
+                return qx + (g['ax'] - qx) * (qy - y) / (qy - G)
             return P + (g['ax'] - P) * (g['ya'] - y) / (g['ya'] - G)
 
         gl = sorted(guys, key=lambda g: -g['ya'])
@@ -422,6 +453,8 @@ def build_pole(J, P, G, spec):
             endx = nx - gs * 2.8
             elb = endx - gs * 3
             ay = min(yt + 3 + 8, g['ya'] - 4)
+            if 'q' in g:
+                ay = max(ay, g['q'][1] + 4)          # arrow on the upper run, above the QP
             J.cp([LEADER[0]], P - LEADER[1], yt - LEADER[2], edit=[dict(
                 vertices=[pt(gx(g, ay), ay), pt(elb, yt + 3), pt(endx, yt + 3)])])
         far_a = anchors[-1]
@@ -507,6 +540,21 @@ def build_sheet(J, Cx, Cy, sheet):
     top = Cy - 100
     for calc in sheet.get('calcs') or []:
         top = build_calc(J, Cx, top, calc) - 10
+    for rs in sheet.get('rspans') or []:            # RULING SPAN boxes under the calcs
+        top = build_rspan(J, Cx, top, rs) - 10
+
+
+def build_rspan(J, Cx, top, rs):
+    """rs = [from pole, to pole, ruling span, final sag] as written. Centered on Cx; returns the bottom."""
+    lines = ['%%URULING SPAN:', '-FROM %s TO %s' % (rs[0], rs[1]), ' RULING SPAN = %s' % rs[2], ' FINAL SAG = %s' % rs[3]]
+    w = 2.876 + max(note_w(t.replace('%%U', '')) for t in lines) + 3        # re-fit after measuring
+    L = Cx - w / 2
+    dy = top - RSPAN['top']
+    for (h, yb), t in zip(RSPAN['lines'], lines):
+        J.cp([h], L + 2.876 - RSPAN['x'], (yb + dy) - yb, edit=[dict(text=t)] if not t.startswith('%%U') else None)
+    bot = RSPAN['bottom'] + dy
+    J.cp([RSPAN['box']], 0, 0, edit=[dict(vertices=[pt(L, top), pt(L + w, top), pt(L + w, bot), pt(L, bot)])])
+    return bot
 
 
 def build_calc(J, Cx, top, calc):

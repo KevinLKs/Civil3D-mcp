@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import sys
 
-FIX = {'DEFUALT': 'DEFAULT', 'REQUIRMENT': 'REQUIREMENT', 'EASMENT': 'EASEMENT'}
+FIX = {'DEFUALT': 'DEFAULT', 'REQUIRMENT': 'REQUIREMENT', 'EASMENT': 'EASEMENT', 'UKNOWN': 'UNKNOWN', 'VEGITATION': 'VEGETATION'}
 
 
 def clean(t):

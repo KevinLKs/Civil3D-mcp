@@ -57,6 +57,10 @@ for the measure-and-fix pass.
   - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
     `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
   - `box: "R"` / `"L"` on any item adds a lone SIDE XARM square beside the pole at that row.
+  - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
+  - `qp` QUEENS POST: a line at its row from the pole out to its anchor's distance (`an`, or its own `L`). Guys with
+    `via: <qp index>` run from the pole to the QP end; one more guy runs from the QP end down to the anchor.
+    Callout text `QUEENS POST`.
   - `o`: tie-break order for two items at the same height.
 - `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed.
 
@@ -72,6 +76,9 @@ addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
 - Pole `calcs`: `[{"hdr": "%%UUNGUYED DE CALC (7733E)", "rows": [["left", "= right"], ...]}]`, drawn from the NOTE
   stash pieces, first box top at Cy - 100, each next 10 below. In combined
   calcs the line under each lettered load (`A. ...`, `B. ...`) is indented 9.923. `tlm.notes`: TLM NOTE box under the visible table.
+- Pole `rspans`: `[[from, to, ruling span, final sag]]` as written, RULING SPAN boxes (template example 3948B8 at
+  1541.4998, -817.1629) centered on Cx under the calcs (Cy - 100 when there is no calc), each 10 below the last.
+- Guys attach at the row of the item with the exact same height first (DG @ 22'6" at the 22'6" COMM row).
 - EX-LOAD and PR-LOAD are sent without `%` (the block prints its own).
 - More than 10 TLM addresses: the block stays at ADDRESS LIST 10 and rows 11 to 20 are burst rows (row 12 pieces
   3975AC, 3975AD, 3975E9, 3975F7 copied down 11.7326 per row from the LIST 10 bottom, insertion y - 129.0591).
