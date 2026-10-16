@@ -19,7 +19,7 @@ civil3d_entity            action=apply jobFile=<same path> approvalToken=<token>
 ```
 
 The old-to-new handle map lands next to the job as `job_TD2536120.result.json`
-for the measure-and-fix pass.
+for `qc.py` (see below).
 
 ## Spec format
 
@@ -42,9 +42,12 @@ for the measure-and-fix pass.
 }
 ```
 
-- `frame` 0 to 11, left to right, top row first. One profile is drawn at Cx - 300, two at Cx -/+ 300 (PDF left, then right).
+- `frame` 0 to 11, left to right, top row first. Two profiles are drawn at Cx -/+ 300 (PDF left, then right). One profile
+  goes in the slot the PDF draws it in: N slot (left) Cx - 300, E slot (right) Cx + 300, 600 apart. Set `slot: "R"` or `"L"`;
+  without it an `L/E` profile goes right and anything else left.
 - `side`: callout and dim side, `R` or `L`. Callout column: 5.75 past the farthest equipment on the callout side (crossarm 35 -> 40.75, dead end 30 -> 35.75, X COND 25 -> 30.75 minimum). `gside`: guys and anchors side, `1` right, `-1` left (needed when there are anchors).
-- Item `h`: true height as written. `c`: callout lines at the row. `above`: extra lines stacked above the row's own line (FH/LA on a primary box).
+- Item `h`: true height as written. No height from the planner: `h` = where the PDF draws it (for the row) and
+  `label: "_'"` so the dim reads `_'`. `c`: callout lines at the row. `above`: extra lines stacked above the row's own line (FH/LA on a primary box).
 - Item types (`t`) and `k`:
   - `pri` side arm box with pin and X CONDs. `k`: `R`, `L` or `C` box position, `B` a box on each side. `fhla: true` puts the SA and CUTOUT on that box.
   - `fhla` side view FH/LA box. `k: "R"` puts the box right of the pole (default left).
@@ -55,9 +58,13 @@ for the measure-and-fix pass.
   - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm. `arm2fl` 2/C arm with FH and LA.
   - `end: "R"` / `"L"` on any crossarm: the pole sits at the arm's right / left end (offset arm), not its center.
   - `arm` crossarm with any mix: `dots` puts SEC-MISC dots on the arm at those slots (comm/CATV seen end on); `pins` and `circ` are slot indexes 0 to 3, left to right (-29.76, -12.13, +12.13, +29.76).
+  - `slant: {"<slot>": "L" | "R"}` on `arm`, `arm2` or `arm4`: that slot's pin is drawn slanted (leaning left 2E3477
+    or right 2E3472, already rotated in the template) with its base on the slot, 0.2 above the arm line. The upright pin
+    of that slot is left out, so nothing has to be erased. Example: `"slant": {"3": "R"}`.
   - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
     `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
-  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM square beside the pole at that row.
+  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM (guard arm) beside the pole, hanging just below that row's
+    line (box top on the line, insertion 2.5 below the row).
   - `omni: true` with `box`: INV OMNI CLOSED with its insertion 5 beside the SIDE XARM insertion, on the box's side (HZ INV OMNI SW).
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
   - `riser` TOR: riser box (2A4127) from the ground to its row, `k` `C` centered on the pole (pole runs through it), `R`/`L` beside it. Callout `TOR`.
@@ -90,8 +97,32 @@ addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
   them in the spec as `"tlm_extra": [address text, meter text, box polyline, divider line]`; `pick_tlm_extra(entities)`
   picks them out of the query result (it also returns rows 11 and 13).
 
-## Not generated
+## QC after the apply (qc.py)
 
-Slanted pins are still drafted by hand. Calc boxes are estimated: re-fit and re-center them after measuring.
-Note box widths and DG leader ends use text width estimates: measure them after
-the job and fix them in one edit batch.
+Box widths, calc centering and DG leader ends are estimated from text widths, so
+they are checked against the drawing after the job runs. `qc.py` does that and
+the rest of the mechanical checks, and prints only failures:
+
+```
+python qc.py spec.json job_TD2536120.json job_TD2536120.result.json query.json --fix fix_TD2536120.json
+```
+
+- `query.json`: a `civil3d_entity` query over the used frames, types TEXT,
+  LWPOLYLINE, LEADER, DIMENSION, INSERT, includeGeometry true. A saved tool
+  output file can be passed as it is. Several files are fine.
+- It rebuilds the job from the spec and stops if that does not match the job
+  file, so every new handle is known for what it is.
+- Checks: every text, dim text, attribute, visibility, layer and color edit
+  landed; text overlaps; guys or leaders through text; crossing leaders; one
+  callout column per profile; dim labels clear of each other and of callouts;
+  note, calc and ruling span boxes fit their measured text (calcs and ruling
+  spans centered on the sheet); TLM notes inside their box; DG leader ends 2.8
+  from the measured text edge with the arrow on a guy; DG callouts 30 apart;
+  note text rules in the spec.
+- `--fix`: box refits, calc re-centering (moves) and DG leader re-points as an
+  apply job, ready to approve and run. Everything else is reported for a fix
+  by hand.
+- It cannot tell whether the spec matches the PDF (heights, slant, box sides,
+  symbols, L/xx). A clean run means the drawing matches the spec and the rules.
+- Entities it cannot find in the query are counted and not checked: widen the
+  window or types and run it again.

@@ -108,6 +108,34 @@ class NewRulesTest(unittest.TestCase):
         box = [e for k, h, e in J.edits if h == ph.TLMNOTE['box']][0]
         self.assertAlmostEqual(box['vertices'][0]['y'], iy - ph.TLM_L10_BOTTOM - 2 * ph.TLM_ROW, 3)
 
+    def test_cutout_never_mirrored(self):
+        for it in (dict(t='pri', h="32'", c=['A'], k='R', fhla=True), dict(t='fhla', h="34'", c=['A'], k='R'),
+                   dict(t='de1', h="33'", c=['A'], fhla='R'), dict(t='fhla', h="34'", c=['A'])):
+            J = ph.Job()
+            ph.place_item(J, 100, 0, it, 1)
+            ops = [op for k, op in J.ops if ph.CUTOUT_SIDE[0] in op['handles']]
+            self.assertEqual(len(ops), 1)
+            self.assertNotIn('mirrorX', ops[0])
+            left = it.get('k') == 'R' or it.get('fhla') == 'R'
+            want = {'pri': -3.3132, 'fhla': -3.3132, 'de1': -8.3132}[it['t']] if left else 3.2159
+            self.assertAlmostEqual(ops[0]['dx'] + ph.CUTOUT_SIDE[1], 100 + want, 3)
+
+    def test_missing_height_label(self):
+        J = ph.Job()
+        ph.build_pole(J, 0, 0, dict(L='L/N', side='R', num='1',
+                                    items=[dict(t='xl', h="27'", label="_'", c=['1/0AT 120V'])]))
+        self.assertEqual([e['text'] for k, h, e in J.edits if h == ph.HDIM[0]], ["_'"])
+
+    def test_single_profile_slot(self):
+        def P(prof):
+            J = ph.build_job(dict(poles=[dict(frame=0, pole='1', profiles=[prof], notes=['-X'])]))
+            line = [e for k, h, e in J.edits if h == ph.LINE[0]][0]   # pole line starts at (P, G)
+            return line['start']['x'] - ph.COLS[0]
+        base = dict(side='R', items=[dict(t='xb', h="20'", c=['COMM'])])
+        self.assertAlmostEqual(P(dict(base, L='L/N')), -300)
+        self.assertAlmostEqual(P(dict(base, L='L/E')), 300)
+        self.assertAlmostEqual(P(dict(base, L='L/NW', slot='R')), 300)
+
     def test_pick_tlm_extra(self):
         top, bot = -779.9231, -791.6558
         ext = lambda y0, y1: dict(min=dict(x=1854.666, y=y0), max=dict(x=1999.2395, y=y1))
@@ -140,6 +168,29 @@ class NewRulesTest(unittest.TestCase):
         self.assertAlmostEqual(col('R', [dict(t='arm2', h="37'", c=['A'])]), 40.75)
         self.assertAlmostEqual(col('L', [dict(t='de2', h="37'", c=['A'])]), 35.75)
         self.assertAlmostEqual(col('R', [dict(t='xb', h="20'", c=['COMM'])]), 30.75)
+
+    def test_slanted_pin_replaces_upright(self):
+        for t in ('arm4', 'arm'):
+            J = ph.Job()
+            it = dict(t=t, h="37'", c=['A'], slant={'0': 'L', '3': 'R'})
+            if t == 'arm':
+                it['pins'] = [0, 1, 3]
+            ph.build_pole(J, 100, 0, dict(L='L/N', side='R', num='1', items=[it]))
+            hs = [h for k, op in J.ops for h in op['handles']]
+            self.assertNotIn('2E3401', hs)                  # slots 0 and 3 lose their upright pins
+            self.assertNotIn('2E3403', hs)
+            self.assertIn('2E3402', hs)
+            row = ph.pos(37)
+            for h, slot in (('2E3477', 0), ('2E3472', 3)):
+                op = next(op for k, op in J.ops if op['handles'] == [h])
+                _, ix, iy = ph.SLANT_PIN['L' if h == '2E3477' else 'R']
+                self.assertAlmostEqual(ix + op['dx'], 100 + ph.ARM_SLOT_X[slot], 3)
+                self.assertAlmostEqual(iy + op['dy'], row + 0.2, 3)
+                self.assertNotIn('mirrorX', op)
+
+    def test_slant_rejected_without_pins(self):
+        with self.assertRaises(ValueError):
+            ph.place_item(ph.Job(), 0, 0, dict(t='armc', h="37'", slant={'0': 'L'}), 1)
 
 
 if __name__ == '__main__':
