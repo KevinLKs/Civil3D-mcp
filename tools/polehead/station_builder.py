@@ -10,6 +10,7 @@ things worth a look. Merge these into the job spec's poles.
 from __future__ import annotations
 
 import json
+import re
 import sys
 
 FIX = {'DEFUALT': 'DEFAULT', 'REQUIRMENT': 'REQUIREMENT', 'EASMENT': 'EASEMENT', 'UKNOWN': 'UNKNOWN', 'VEGITATION': 'VEGETATION'}
@@ -39,6 +40,8 @@ def sheet_from_rows(pole, rows, report):
             crew.append(c if c.startswith('-') else '-' + c)
     for i in range(23, 43):                      # N27..N46
         v, o, q = rows[i]
+        if not v and o:                          # planners type whole notes in column O with N empty: still a note
+            v, o, q = o, None, None
         if not v:
             continue
         t = clean(v)
@@ -56,6 +59,8 @@ def sheet_from_rows(pole, rows, report):
             t = t.split('___')[0].rstrip() + ' ' + clean(fill)
         if not t.startswith('-'):
             t = '-' + t
+        t = re.sub(r'\bVIA VIA\b', 'VIA', t)              # fill-in that repeats the template word
+        t = re.sub(r'\b(OF|AT|R/O)(\d)', r'\1 \2', t)      # missing space before a house number (OF1211)
         if t in notes:
             continue                             # duplicates are dropped silently
         notes.append(t)
