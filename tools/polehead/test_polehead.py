@@ -193,5 +193,21 @@ class NewRulesTest(unittest.TestCase):
             ph.place_item(ph.Job(), 0, 0, dict(t='armc', h="37'", slant={'0': 'L'}), 1)
 
 
+class AnchorIndexTest(unittest.TestCase):
+    def test_guys_follow_listed_anchor_order(self):
+        """Far anchor listed first: guys with an=0 must still go to the far anchor (TD2536031 bug)."""
+        spec = {"job": "T", "poles": [{"frame": 0, "pole": "1296866E", "profiles": [{
+            "L": "L/E", "side": "L", "gside": 1,
+            "items": [{"t": "dot", "h": "31'", "c": ["X"]}, {"t": "dot", "h": "22'6\"", "c": ["COMM"]}],
+            "anchors": [{"L": "26'11\"", "c": "IN"}, {"L": "23'6\"", "c": "EX: COMM ANCHOR"}],
+            "guys": [{"h": "31'", "an": 0, "c": "IN: DG"}, {"h": "22'6\"", "an": 1, "c": "EX: COMM DG"}]}]}]}
+        J = ph.build_job(spec)
+        guys = [e for _, h, e in J.edits if h == ph.GUY[0]]
+        P = ph.frame(0)[0] + 300
+        far, near = P + ph.anchor_base(23) + 4 * 3, P + ph.anchor_base(23)
+        self.assertAlmostEqual(guys[0]['vertices'][1]['x'], round(far, 4), places=3)
+        self.assertAlmostEqual(guys[1]['vertices'][1]['x'], round(near, 4), places=3)
+
+
 if __name__ == '__main__':
     unittest.main()

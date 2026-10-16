@@ -42,7 +42,7 @@ for `qc.py` (see below).
 }
 ```
 
-- `frame` 0 to 11, left to right, top row first. Two profiles are drawn at Cx -/+ 300 (PDF left, then right). One profile
+- `frame` 0 and up, left to right, 4 per row, top row first. The template only has frames 0 to 7; frame 8 and up are added by copying the row 2 frame set 2070 lower per row (sheet number = frame + 2). Two profiles are drawn at Cx -/+ 300 (PDF left, then right). One profile
   goes in the slot the PDF draws it in: N slot (left) Cx - 300, E slot (right) Cx + 300, 600 apart. Set `slot: "R"` or `"L"`;
   without it an `L/E` profile goes right and anything else left.
 - `side`: callout and dim side, `R` or `L`. Callout column: 5.75 past the farthest equipment on the callout side (crossarm 35 -> 40.75, dead end 30 -> 35.75, X COND 25 -> 30.75 minimum). `gside`: guys and anchors side, `1` right, `-1` left (needed when there are anchors).
@@ -55,7 +55,7 @@ for `qc.py` (see below).
   - `xr`, `xl`, `xb` X COND right, left, both. COMM and CATV lines are always X CONDs; add `dot: true` to keep the SEC-MISC dot under them.
   - `dot` SEC-MISC dot alone (a bare dot with no line).
   - `sg` span guy half, `k` `R` or `L` (never mirrored or edited). `share: 1` puts it on the row of the other item at that whole foot.
-  - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm. `arm2fl` 2/C arm with FH and LA.
+  - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm (outer CUTOUTs, inner SAs; `ends: "sa"` puts the SAs at the arm ends and the CUTOUTs inner). `arm2fl` 2/C arm with FH and LA.
   - `end: "R"` / `"L"` on any crossarm: the pole sits at the arm's right / left end (offset arm), not its center.
   - `arm` crossarm with any mix: `dots` puts SEC-MISC dots on the arm at those slots (comm/CATV seen end on); `pins` and `circ` are slot indexes 0 to 3, left to right (-29.76, -12.13, +12.13, +29.76).
   - `slant: {"<slot>": "L" | "R"}` on `arm`, `arm2` or `arm4`: that slot's pin is drawn slanted (leaning left 2E3477
@@ -63,16 +63,20 @@ for `qc.py` (see below).
     of that slot is left out, so nothing has to be erased. Example: `"slant": {"3": "R"}`.
   - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
     `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
-  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM (guard arm) beside the pole, hanging just below that row's
-    line (box top on the line, insertion 2.5 below the row).
+  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM (guard arm) beside the pole, centered on that row (the
+    middle of its wall on the dim point). With `omni` the box hangs just below the row line and the omni sits at the box center.
+  - Pins drawn with a circle at their base (4/C arms on Builder pages): use `arm` with `pins` AND `circ` (e.g. `[0,1,2,3]` both).
   - `omni: true` with `box`: INV OMNI CLOSED with its insertion 5 beside the SIDE XARM insertion, on the box's side (HZ INV OMNI SW).
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
+  - `rcs` RCS CONTROL BOX: template rectangle 2E3432 centered on its row, `k` `L`/`R` beside the pole (never mirrored).
+  - `gal` guard arm drawn as a line through the pole: the 35 long line 2E3922 centered on the pole.
+  - `top: true` on `de1`/`de2`: X CONDs both ways from the pin tops too, when the PDF draws arrows over the dead end pins.
   - `riser` TOR: riser box (2A4127) from the ground to its row, `k` `C` centered on the pole (pole runs through it), `R`/`L` beside it. Callout `TOR`.
   - `qp` QUEENS POST: a line at its row from the pole out to its anchor's distance (`an`, or its own `L`). Guys with
     `via: <qp index>` run from the pole to the QP end; one more guy runs from the QP end down to the anchor.
     Callout text `QUEENS POST`.
   - `o`: tie-break order for two items at the same height.
-- `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed.
+- `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed (any order; the generator never reorders the list).
 
 ## Rules built in
 
