@@ -96,6 +96,7 @@ SRC = {
     'pins4':  dict(h=['2E3401', '2E3402', '2E3404', '2E3403'], px=4610.268, py=-1446.6283),
     'circ4':  dict(h=['2E3405', '2E3408', '2E3407', '2E3406'], px=4610.268, py=-1446.6283),
     'fhlaf':  dict(h=['2E380B', '2E382B', '2E382C', '2E3830', '2E3832'], px=5177.1994, py=-1341.8281),
+    'fhlaf_sa': dict(h=['2E380B', '2E382D', '2E382E', '2E382F', '2E3831'], px=5177.1994, py=-1341.8281),  # SA at the ends, CUTOUTs inner
     'arm2fl': dict(h=['2E380C', '2E383D', '2E383E', '2E383F', '2E3840', '2E3842', '2E3841'], px=5177.1994, py=-1471.8281),
     'de1':    dict(h=['2E3415', '2E3912', '2E3419', '2E3916', '2E3913', '2E3914', '2E3915', '2E3918'], px=4697.5843, py=-1446.6283),
     'de2x':   dict(h=['2E3490', '2E3418', '2E3417', '2E3416'], px=4697.5843, py=-1446.6283),
@@ -340,7 +341,7 @@ def place_item(J, P, r, it, sc):
     elif t in ('fhlaf', 'arm2fl'):
         if it.get('slant'):
             raise ValueError('%s: slant is only supported on arm, arm2 and arm4' % t)
-        src = SRC[t]
+        src = SRC['fhlaf_sa' if t == 'fhlaf' and it.get('ends') == 'sa' else t]
         J.cp(src['h'], P - src['px'], r - src['py'])
         a = 35
     elif t in ('de1', 'de2'):
