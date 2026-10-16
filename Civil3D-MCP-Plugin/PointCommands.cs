@@ -11,6 +11,11 @@ public static class PointCommands
     var groupName = PluginRuntime.GetOptionalString(parameters, "groupName");
     var limit = PluginRuntime.GetOptionalInt(parameters, "limit") ?? int.MaxValue;
     var offset = PluginRuntime.GetOptionalInt(parameters, "offset") ?? 0;
+    var includeRanges = ParseNumberRanges(PluginRuntime.GetOptionalString(parameters, "includeNumbers"));
+    var excludeRanges = ParseNumberRanges(PluginRuntime.GetOptionalString(parameters, "excludeNumbers"));
+    var descriptionPatterns = ParseWildcardPatterns(PluginRuntime.GetOptionalString(parameters, "includeDescriptions"));
+    var layerSet = ParseLayerSet(PluginRuntime.GetParameter(parameters, "layers") as JsonArray);
+    var window = ParseWindow(PluginRuntime.GetParameter(parameters, "window") as JsonObject);
 
     return CivilExecution.ReadAsync<object?>((doc, civilDoc, database, transaction) =>
     {
@@ -22,6 +27,11 @@ public static class PointCommands
 
       var allPoints = EnumeratePoints(civilDoc, transaction)
         .Where(p => allowedNumbers == null || allowedNumbers.Contains(p.PointNumber))
+        .Where(p => includeRanges == null || InRanges(includeRanges, p.PointNumber))
+        .Where(p => excludeRanges == null || !InRanges(excludeRanges, p.PointNumber))
+        .Where(p => descriptionPatterns == null || descriptionPatterns.Any(rx => rx.IsMatch(p.RawDescription ?? string.Empty)))
+        .Where(p => layerSet == null || layerSet.Contains(p.Layer))
+        .Where(p => window == null || (p.Location.X >= window.Value.minX && p.Location.X <= window.Value.maxX && p.Location.Y >= window.Value.minY && p.Location.Y <= window.Value.maxY))
         .OrderBy(p => p.PointNumber)
         .ToList();
 
@@ -176,6 +186,112 @@ public static class PointCommands
         ["groups"] = groups,
       };
     });
+  }
+
+  // "1-500,600,700-710" -> list of inclusive ranges. Null when no filter given.
+  internal static List<(uint lo, uint hi)>? ParseNumberRanges(string? spec)
+  {
+    if (string.IsNullOrWhiteSpace(spec))
+    {
+      return null;
+    }
+
+    var ranges = new List<(uint lo, uint hi)>();
+    foreach (var rawPart in spec!.Split(','))
+    {
+      var part = rawPart.Trim();
+      if (part.Length == 0)
+      {
+        continue;
+      }
+
+      var dash = part.IndexOf('-');
+      if (dash > 0)
+      {
+        if (!uint.TryParse(part.Substring(0, dash).Trim(), out var lo) || !uint.TryParse(part.Substring(dash + 1).Trim(), out var hi))
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Invalid point number range '{part}'. Use forms like '1-500,600'.");
+        }
+        ranges.Add(lo <= hi ? (lo, hi) : (hi, lo));
+      }
+      else
+      {
+        if (!uint.TryParse(part, out var single))
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Invalid point number '{part}'. Use forms like '1-500,600'.");
+        }
+        ranges.Add((single, single));
+      }
+    }
+
+    return ranges.Count == 0 ? null : ranges;
+  }
+
+  private static bool InRanges(List<(uint lo, uint hi)> ranges, uint number)
+  {
+    foreach (var (lo, hi) in ranges)
+    {
+      if (number >= lo && number <= hi)
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // "TC*,*LO" -> case-insensitive wildcard regexes against the raw description.
+  internal static List<System.Text.RegularExpressions.Regex>? ParseWildcardPatterns(string? spec)
+  {
+    if (string.IsNullOrWhiteSpace(spec))
+    {
+      return null;
+    }
+
+    var patterns = spec!.Split(',')
+      .Select(p => p.Trim())
+      .Where(p => p.Length > 0)
+      .Select(p => new System.Text.RegularExpressions.Regex(
+        "^" + System.Text.RegularExpressions.Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+      .ToList();
+
+    return patterns.Count == 0 ? null : patterns;
+  }
+
+  private static HashSet<string>? ParseLayerSet(JsonArray? layers)
+  {
+    if (layers == null || layers.Count == 0)
+    {
+      return null;
+    }
+
+    var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var node in layers)
+    {
+      var name = node?.GetValue<string>();
+      if (!string.IsNullOrWhiteSpace(name))
+      {
+        set.Add(name!.Trim());
+      }
+    }
+    return set.Count == 0 ? null : set;
+  }
+
+  private static (double minX, double minY, double maxX, double maxY)? ParseWindow(JsonObject? window)
+  {
+    if (window == null)
+    {
+      return null;
+    }
+
+    double Read(string key) => window[key]?.GetValue<double>()
+      ?? throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"window is missing '{key}'.");
+
+    var minX = Read("minX");
+    var minY = Read("minY");
+    var maxX = Read("maxX");
+    var maxY = Read("maxY");
+    return (Math.Min(minX, maxX), Math.Min(minY, maxY), Math.Max(minX, maxX), Math.Max(minY, maxY));
   }
 
   private static IEnumerable<CogoPoint> EnumeratePoints(Autodesk.Civil.ApplicationServices.CivilDocument civilDoc, Autodesk.AutoCAD.DatabaseServices.Transaction transaction)

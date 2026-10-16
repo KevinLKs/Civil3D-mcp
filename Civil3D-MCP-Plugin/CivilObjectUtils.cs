@@ -242,6 +242,7 @@ public static class CivilObjectUtils
       ["z"] = point.Location.Z,
       ["rawDescription"] = point.RawDescription,
       ["fullDescription"] = point.FullDescription,
+      ["layer"] = point.Layer,
     };
   }
 }

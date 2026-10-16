@@ -19,6 +19,14 @@ const PointSchema = z.object({
   z: z.number(),
   rawDescription: z.string(),
   fullDescription: z.string(),
+  layer: z.string().optional(),
+});
+
+const PointWindowSchema = z.object({
+  minX: z.number(),
+  minY: z.number(),
+  maxX: z.number(),
+  maxY: z.number(),
 });
 
 const PointListResponseSchema = z.object({
@@ -74,6 +82,8 @@ const canonicalPointInputShape = {
   includeNumbers: z.string().optional(),
   excludeNumbers: z.string().optional(),
   includeDescriptions: z.string().optional(),
+  layers: z.array(z.string()).optional(),
+  window: PointWindowSchema.optional(),
   delimiter: z.string().optional(),
   translateX: z.number().optional(),
   translateY: z.number().optional(),
@@ -91,6 +101,13 @@ const PointListArgsSchema = z.object({
   groupName: z.string().optional(),
   limit: z.number().optional(),
   offset: z.number().optional(),
+  // Same syntax as point group queries: "1-500,600,700-710".
+  includeNumbers: z.string().optional(),
+  excludeNumbers: z.string().optional(),
+  // Comma-separated, case-insensitive wildcards on raw description: "TC*,*LO".
+  includeDescriptions: z.string().optional(),
+  layers: z.array(z.string()).optional(),
+  window: PointWindowSchema.optional(),
 });
 
 const PointGetArgsSchema = z.object({
@@ -177,6 +194,11 @@ export const POINT_DOMAIN_DEFINITION: DomainToolDefinition = {
           groupName: args.groupName,
           limit: args.limit,
           offset: args.offset,
+          includeNumbers: args.includeNumbers,
+          excludeNumbers: args.excludeNumbers,
+          includeDescriptions: args.includeDescriptions,
+          layers: args.layers,
+          window: args.window,
         }),
       ),
     },
