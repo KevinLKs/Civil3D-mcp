@@ -20,16 +20,19 @@ import sys
 
 # ------------------------------------------------------------------ frames
 COLS = [-543.912, 2246.088, 5036.088, 7826.088]
-ROWS = [-3575.8251, -5645.8251, -7715.8251]
-NAME_HANDLES = ['386B22', '386B24', '386B25', '386B26', '386B27', '386B28', '386B29', '386B2A',
-                '3948A3', '3948A4', '3948A5', '3948A6']
-ROW3_SHEET_NUMBERS = {8: ('3948A7', '10'), 9: ('3948A8', '11'), 10: ('3948A9', '12'), 11: ('3948AA', '13')}
+ROW0, ROW_STEP = -3575.8251, 2070
+NAME_HANDLES = ['386B22', '386B24', '386B25', '386B26', '386B27', '386B28', '386B29', '386B2A']
+# The template only has frames 0 to 7 (two rows, sheets 2 to 9). Frame 8 and up: copy the row 2 frame set of that
+# column (both NO-PLOT outlines, the Defpoints pole name and sheet number) 2070 lower per row, then edit the name
+# and set the sheet number to frame + 2.
+ROW2_FRAME_SET = [('2A3C5C', '2A3D50', '386B27', '2A2A1A'), ('2A3C5D', '2A3D4D', '386B28', '2A2A1B'),
+                  ('2A3C5E', '2A3D4E', '386B29', '2A2A1C'), ('2A3C5F', '2A3D4F', '386B2A', '2A2A1E')]
 
 
 def frame(i):
-    if not 0 <= i < 12:
-        raise ValueError('frame %d: the template has 12 frames (0-11); add frame rows first' % i)
-    return COLS[i % 4], ROWS[i // 4]
+    if i < 0:
+        raise ValueError('frame %d: frames start at 0' % i)
+    return COLS[i % 4], ROW0 - ROW_STEP * (i // 4)
 
 
 # ------------------------------------------------------------------ scales
@@ -113,6 +116,9 @@ DE1_PINS = ('2E3419', '2E3916')
 SLANT_PIN = {'L': ('2E3477', 4529.5100, -1471.6283),    # leaning left, 25 deg (mirrored)
              'R': ('2E3472', 4525.7361, -1496.6283)}    # leaning right, 335 deg
 SG_LEN = 33.76
+RCS = ('2E3432', 4784.9005, -2011.4173)            # RCS control box rectangle: left edge, center y
+RCS_W = 6.5467
+GALINE = ('2E3922', 4767.4005, -2151.7964)        # 35 long guard arm line: start (left end)
 RISER_W = 3.4169
 COL_GAP = 5.75                                    # callout column clearance past the farthest equipment
 COL_MIN = 30.75                                   # never closer than an X COND tip (25) + gap
@@ -288,6 +294,16 @@ def place_item(J, P, r, it, sc):
             J.cp(src['h'], P - src['px'], r - src['py'])
         dirs = {'xr': [1], 'xl': [-1], 'xb': [1, -1]}[t]
         a = 25 if sc in dirs else 0
+    elif t == 'rcs':
+        # RCS CONTROL BOX: the oddly shaped template rectangle 2E3432 (6.5467 x 8.746), centered on its row, edge on
+        # the pole line on the side the PDF draws it (k 'L' or 'R'). Plain polyline, so mirroring would also be fine.
+        x0 = P - RCS_W if k == 'L' else P
+        J.cp([RCS[0]], x0 - RCS[1], r - RCS[2])
+        a = RCS_W if (1 if k == 'R' else -1) == sc else 0
+    elif t == 'gal':
+        # guard arm drawn as a line through the pole in the PDF: 35 long LINE 2E3922, centered on the pole
+        J.cp([GALINE[0]], (P - 17.5) - GALINE[1], r - GALINE[2])
+        a = 17.5
     elif t in ('dot', 'none'):
         pass                                               # dot: handled below; none: only a 'box' (guard arm, comm box)
     elif t == 'riser':
@@ -352,6 +368,12 @@ def place_item(J, P, r, it, sc):
         J.cp(hs, P - src['px'], r - src['py'], mirror=P if k == 'L' else None)
         dirs = [1, -1] if t == 'de2' else ([-1] if k == 'L' else [1])
         a = 30 if sc in dirs else 5
+        if it.get('top'):
+            # X COND both ways from the pin tops as well (a run over the dead end): right from the right pin
+            # (P + 2.5), left from the left pin (P - 2.5), at pin insertion + 4.4648 like the primary box group
+            yt = r + 2.5 + 4.4648
+            J.cp(['2E348D'], (P + 2.5) - 4697.5843, yt - (-1389.6635))
+            J.cp(['2E3492'], (P - 2.5) - 4697.5843, yt - (-1389.6635))
         if it.get('fhla'):
             # SA + CUTOUT on the dead end boxes; fhla 'R' = cutout left, SA right (mirrored)
             cp_fhla(J, P, r, SRC['fhla_on_box']['h'], it['fhla'] == 'R', left_edge=P - 5)   # dead end boxes P - 5 to P + 5
@@ -757,10 +779,13 @@ def build_job(spec):
             pole = dict(pole, tlm_extra=spec['tlm_extra'])
         J.ctx = dict(pole=pole['pole'], frame=idx, Cx=Cx, Cy=Cy, part='sheet')
         build_sheet(J, Cx, Cy, pole)
-        J.edit_existing(NAME_HANDLES[idx], dict(text=pole['pole']))
-        if idx in ROW3_SHEET_NUMBERS:
-            h, n = ROW3_SHEET_NUMBERS[idx]
-            J.edit_existing(h, dict(text=n))
+        if idx < len(NAME_HANDLES):
+            J.edit_existing(NAME_HANDLES[idx], dict(text=pole['pole']))
+        else:
+            J.tag(part='frame')
+            fs = ROW2_FRAME_SET[idx % 4]
+            J.cp(list(fs), 0, -ROW_STEP * (idx // 4 - 1),
+                 edit=[None, None, dict(text=pole['pole']), dict(text=str(idx + 2))])
     return J
 
 
