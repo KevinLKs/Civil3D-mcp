@@ -108,6 +108,9 @@ ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.1
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 ARM_SLOT_X = [-29.7551, -12.128, 12.128, 29.7551]   # pin / circle slot offsets from the arm center
 DE1_PINS = ('2E3419', '2E3916')
+# slanted VERT P&I, already rotated in the template (never rotate): insertion = pin base, 0.2 above its arm line
+SLANT_PIN = {'L': ('2E3477', 4529.5100, -1471.6283),    # leaning left, 25 deg (mirrored)
+             'R': ('2E3472', 4525.7361, -1496.6283)}    # leaning right, 335 deg
 SG_LEN = 33.76
 RISER_W = 3.4169
 COL_GAP = 5.75                                    # callout column clearance past the farthest equipment
@@ -297,6 +300,12 @@ def place_item(J, P, r, it, sc):
         src = SRC['sg_r' if d > 0 else 'sg_l']
         J.cp(src['h'], P - src['px'], r - src['py'])       # never mirrored, never edited
         a = SG_LEN if d == sc else 0
+    elif t == 'armc' and it.get('slant'):
+        raise ValueError('armc has conductor circles, no pins to slant; use arm with pins and slant')
+    elif t in ('arm2', 'arm4') and it.get('slant'):
+        # a slanted pin replaces its upright one: draw it as the generic arm with those pin slots
+        it = dict(it, t='arm', pins={'arm2': [0, 3], 'arm4': [0, 1, 2, 3]}[t])
+        return place_item(J, P, r, it, sc)
     elif t in ('arm2', 'arm4', 'armc'):
         # end: 'R' = pole at the arm's right end (arm runs left of the pole), 'L' = pole at its left end
         sh = {'R': -35, 'L': 35}.get(it.get('end'), 0)
@@ -309,13 +318,20 @@ def place_item(J, P, r, it, sc):
         # crossarm with any mix of pins and conductor circles: pins/circ = slot indexes 0..3 (left to right)
         sh = {'R': -35, 'L': 35}.get(it.get('end'), 0)
         src = SRC['arm']
-        hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', [])] + [ARM_CIRC[i] for i in it.get('circ', [])]
+        slant = {int(i): d for i, d in (it.get('slant') or {}).items()}
+        hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', []) if i not in slant] + \
+            [ARM_CIRC[i] for i in it.get('circ', [])]
         J.cp(hs, P + sh - src['px'], r - src['py'])
+        for i, d in sorted(slant.items()):             # slanted VERT P&I: base on the slot, arm line + 0.2
+            h, ix, iy = SLANT_PIN[d]
+            J.cp([h], P + sh + ARM_SLOT_X[i] - ix, (r + 0.2) - iy)
         for i in it.get('dots', []):                   # SEC-MISC dots on the arm (comm / CATV seen end on)
             d = SRC['dot']
             J.cp(d['h'], P + sh + ARM_SLOT_X[i] - d['px'], r - d['py'])
         a = max(sc * (sh - 35), sc * (sh + 35), 0)
     elif t in ('fhlaf', 'arm2fl'):
+        if it.get('slant'):
+            raise ValueError('%s: slant is only supported on arm, arm2 and arm4' % t)
         src = SRC[t]
         J.cp(src['h'], P - src['px'], r - src['py'])
         a = 35

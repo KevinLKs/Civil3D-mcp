@@ -58,6 +58,9 @@ for the measure-and-fix pass.
   - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm. `arm2fl` 2/C arm with FH and LA.
   - `end: "R"` / `"L"` on any crossarm: the pole sits at the arm's right / left end (offset arm), not its center.
   - `arm` crossarm with any mix: `dots` puts SEC-MISC dots on the arm at those slots (comm/CATV seen end on); `pins` and `circ` are slot indexes 0 to 3, left to right (-29.76, -12.13, +12.13, +29.76).
+  - `slant: {"<slot>": "L" | "R"}` on `arm`, `arm2` or `arm4`: that slot's pin is drawn slanted (leaning left 2E3477
+    or right 2E3472, already rotated in the template) with its base on the slot, 0.2 above the arm line. The upright pin
+    of that slot is left out, so nothing has to be erased. Example: `"slant": {"3": "R"}`.
   - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
     `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
   - `box: "R"` / `"L"` on any item adds a lone SIDE XARM (guard arm) beside the pole, hanging just below that row's
@@ -96,6 +99,6 @@ addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
 
 ## Not generated
 
-Slanted pins are still drafted by hand. Calc boxes are estimated: re-fit and re-center them after measuring.
+Calc boxes are estimated: re-fit and re-center them after measuring.
 Note box widths and DG leader ends use text width estimates: measure them after
 the job and fix them in one edit batch.

@@ -169,6 +169,29 @@ class NewRulesTest(unittest.TestCase):
         self.assertAlmostEqual(col('L', [dict(t='de2', h="37'", c=['A'])]), 35.75)
         self.assertAlmostEqual(col('R', [dict(t='xb', h="20'", c=['COMM'])]), 30.75)
 
+    def test_slanted_pin_replaces_upright(self):
+        for t in ('arm4', 'arm'):
+            J = ph.Job()
+            it = dict(t=t, h="37'", c=['A'], slant={'0': 'L', '3': 'R'})
+            if t == 'arm':
+                it['pins'] = [0, 1, 3]
+            ph.build_pole(J, 100, 0, dict(L='L/N', side='R', num='1', items=[it]))
+            hs = [h for k, op in J.ops for h in op['handles']]
+            self.assertNotIn('2E3401', hs)                  # slots 0 and 3 lose their upright pins
+            self.assertNotIn('2E3403', hs)
+            self.assertIn('2E3402', hs)
+            row = ph.pos(37)
+            for h, slot in (('2E3477', 0), ('2E3472', 3)):
+                op = next(op for k, op in J.ops if op['handles'] == [h])
+                _, ix, iy = ph.SLANT_PIN['L' if h == '2E3477' else 'R']
+                self.assertAlmostEqual(ix + op['dx'], 100 + ph.ARM_SLOT_X[slot], 3)
+                self.assertAlmostEqual(iy + op['dy'], row + 0.2, 3)
+                self.assertNotIn('mirrorX', op)
+
+    def test_slant_rejected_without_pins(self):
+        with self.assertRaises(ValueError):
+            ph.place_item(ph.Job(), 0, 0, dict(t='armc', h="37'", slant={'0': 'L'}), 1)
+
 
 if __name__ == '__main__':
     unittest.main()
