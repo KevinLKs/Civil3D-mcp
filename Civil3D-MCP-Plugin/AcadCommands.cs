@@ -7,6 +7,30 @@ namespace Civil3DMcpPlugin;
 
 public static class AcadCommands
 {
+  internal static ObjectId EnsureLayer(Database database, Transaction transaction, string layerName)
+  {
+    var layerTable = CivilObjectUtils.GetRequiredObject<LayerTable>(transaction, database.LayerTableId, OpenMode.ForRead);
+    if (layerTable.Has(layerName))
+    {
+      return layerTable[layerName];
+    }
+
+    try
+    {
+      SymbolUtilityServices.ValidateSymbolName(layerName, false);
+    }
+    catch (Exception)
+    {
+      throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"'{layerName}' is not a valid layer name.");
+    }
+
+    layerTable.UpgradeOpen();
+    var record = new LayerTableRecord { Name = layerName };
+    var id = layerTable.Add(record);
+    transaction.AddNewlyCreatedDBObject(record, true);
+    return id;
+  }
+
   public static Task<object?> CreatePolylineAsync(JsonObject? parameters)
   {
     var pointsNode = PluginRuntime.GetParameter(parameters, "points") as JsonArray;
@@ -33,15 +57,17 @@ public static class AcadCommands
 
         var x = point["x"]?.GetValue<double>() ?? throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", "Point is missing x.");
         var y = point["y"]?.GetValue<double>() ?? throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", "Point is missing y.");
-        polyline.AddVertexAt(index, new Point2d(x, y), 0, 0, 0);
+        // Bulge of the segment that STARTS at this vertex: tan(sweep/4), positive = counterclockwise.
+        var bulge = point["bulge"]?.GetValue<double>() ?? 0.0;
+        polyline.AddVertexAt(polyline.NumberOfVertices, new Point2d(x, y), bulge, 0, 0);
       }
 
       polyline.Closed = closed;
 
       if (!string.IsNullOrWhiteSpace(layerName))
       {
-        var layerId = LookupUtils.GetLayerId(database, transaction, layerName);
-        polyline.LayerId = layerId;
+        // Create the layer if it is missing instead of silently falling back to the current layer.
+        polyline.LayerId = EnsureLayer(database, transaction, layerName!.Trim());
       }
 
       var polylineId = modelSpace.AppendEntity(polyline);
