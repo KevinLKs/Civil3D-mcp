@@ -170,6 +170,12 @@ class Job:
         self.ops = []          # (key, op)
         self.edits = []        # (key or None, handle, edit)
         self.report = []
+        self.ctx = {}          # what is being drawn now (pole, part, ...); stored per copy for qc.py
+        self.meta = {}         # op key -> ctx at copy time
+        self.keymap = {}       # op key -> group index, set by to_apply_job
+
+    def tag(self, **kw):
+        self.ctx = dict(self.ctx, **kw)
 
     def cp(self, handles, dx, dy, mirror=None, edit=None):
         key = len(self.ops)
@@ -177,6 +183,7 @@ class Job:
         if mirror is not None:
             op['mirrorX'] = r4(mirror)
         self.ops.append((key, op))
+        self.meta[key] = dict(self.ctx)
         for i, e in enumerate(edit or []):
             if e:
                 self.edits.append((key, handles[i], e))
@@ -199,6 +206,7 @@ class Job:
             else:
                 groups.append(dict(sig=sig, op=dict(op, handles=list(op['handles'])), set=set(op['handles'])))
                 keymap[key] = len(groups) - 1
+        self.keymap = keymap
         copies = [dict(id='g%d' % gi, **g['op']) for gi, g in enumerate(groups)]
         edits = []
         for key, handle, e in self.edits:
@@ -380,6 +388,7 @@ def build_pole(J, P, G, spec):
         if it['t'] == 'qp':     # QP length = its anchor's distance unless the planner gives its own 'L'
             it['qx'] = (P + gs * (anchor_base(short) + 4 * (int(ft(it['L'])) - short))) if it.get('L') \
                 else anchors[it.get('an', 0)]['x']
+    J.tag(part='equip', P=P, G=G, side=spec['side'], gside=spec.get('gside', 0))
     top = 0
     texts = []           # callout text boxes (x0, x1, baseline)
     for it in items:
@@ -388,6 +397,7 @@ def build_pole(J, P, G, spec):
         top = max(top, it['row'])
     # callout column: 5.75 past the farthest equipment on the callout side (arm 35 -> 40.75, dead end 30 -> 35.75)
     col = max([COL_MIN] + [it['a'] + COL_GAP for it in items])
+    J.tag(part='callout')
     for it in items:
         r = G + it['row']
         lines = list(it.get('above', [])) + list(it['c'])
@@ -402,6 +412,7 @@ def build_pole(J, P, G, spec):
             texts.append((P + sc * x0, P + sc * x1, yb))
 
     # pole line
+    J.tag(part='line')
     J.cp([LINE[0]], P - LINE[1], G - LINE[2], edit=[dict(start=pt(P, G), end=pt(P, G + top))])
 
     # anchors decide the base line
@@ -413,6 +424,7 @@ def build_pole(J, P, G, spec):
     J.cp([LINE[0]], P - LINE[1], G - LINE[2], edit=[dict(start=pt(b0, G), end=pt(b1, G))])
 
     # height dims: tight fit, ordered outward by height
+    J.tag(part='dim')
     dims = sorted([it for it in items if not it.get('share')], key=lambda it: it['row'])
     x0 = 0
     for i, it in enumerate(dims):
@@ -438,6 +450,7 @@ def build_pole(J, P, G, spec):
 
     # guys and anchors
     if anchors:
+        J.tag(part='anchor')
         anchors.sort(key=lambda a: abs(a['x'] - P))
         for i, a in enumerate(anchors):
             J.cp([ARC[0]], a['x'] - ARC[1], G + 2 - ARC[2])
@@ -450,6 +463,7 @@ def build_pole(J, P, G, spec):
             exact.setdefault(ft(it['h']), it['row'])
         qps = [it for it in items if it['t'] == 'qp']
         guys = spec.get('guys', [])
+        J.tag(part='guy')
         for g in guys:
             hf = int(ft(g['h']))
             # exact height first (DG @ 22'6" at the 22'6" row), then the whole foot, then its own position
@@ -479,7 +493,8 @@ def build_pole(J, P, G, spec):
             g['yt'] = g['ya'] - 28 if last is None else min(g['ya'] - 28, last - 30)
             last = g['yt']
         lift = max(0, (G + 20) - last) if gl else 0
-        for g in gl:
+        for gi, g in enumerate(gl):
+            J.tag(part='dg', dg=gi)
             yt = g['yt'] + lift
             near = max([gs * (gx(o, yt + 3) - P) for o in guys if o['ya'] > yt] or [0]) + 20
             nx = P + gs * near
@@ -493,6 +508,7 @@ def build_pole(J, P, G, spec):
                 ay = max(ay, g['q'][1] + 4)          # arrow on the upper run, above the QP
             J.cp([LEADER[0]], P - LEADER[1], yt - LEADER[2], edit=[dict(
                 vertices=[pt(gx(g, ay), ay), pt(elb, yt + 3), pt(endx, yt + 3)])])
+        J.tag(part='anclabel')
         far_a = anchors[-1]
         lab = sorted([a for a in anchors if a.get('c')], key=lambda a: 0 if a is far_a else 1)
         for i, a in enumerate(lab):
@@ -506,6 +522,7 @@ def build_pole(J, P, G, spec):
                     vertices=[pt(a['x'] + gs * 1.2, G + 1.5), pt(ex - gs * 3, yb + 3), pt(ex, yb + 3)])])
 
     # pole label
+    J.tag(part='label')
     cx = P if gs == 0 else (P + 9.9 + 15.55 if gs < 0 else P - 9.86 - 15.55)
     for k, ((h, sx, sy), t) in enumerate(zip(LBL, ['PROPOSED', spec['L'], spec['num']])):
         J.cp([h], cx - sx, (G - 11.08 - 8 * k) - sy, edit=[dict(text=t)] if k else None)
@@ -570,6 +587,7 @@ def build_sheet(J, Cx, Cy, sheet):
     top = Cy + 618.326
 
     def box(spec, lines, top):
+        J.tag(part=spec['title'].rstrip(':').lower().replace(' ', ''))
         J.cp([spec['hdr'][0]], L + 2.876 - STASH_TEXT_X, (top - 8.03) - spec['hdr'][1])
         yb = top - 8.03
         for t in lines:
@@ -585,6 +603,7 @@ def build_sheet(J, Cx, Cy, sheet):
     if crew:
         top = box(CREW, crew, top) - 5
     bot = box(NOTE, notes, top) if notes else top + 5
+    J.tag(part='blocks')
     gy = bot - 5 - GPS[2]
     gps = sheet.get('gps') or ['', '']
     J.cp([GPS[0]], L - STASH_X, gy - GPS[1], edit=[dict(attributes={'LAT': gps[0], 'LONG': gps[1]})])
@@ -614,6 +633,7 @@ def build_sheet(J, Cx, Cy, sheet):
             J.report.append('%s: no tlm_extra handles in the spec; using the TD2536012 handles' % sheet['pole'])
         tlm_extra_rows(J, ix, iy, addr[10:], sheet.get('tlm_extra'))
         notes = tlm.get('notes') or []
+        J.tag(part='tlmnote')
         if notes:
             # box directly under the visible table; same x span as the block
             top = tlm_bottom(iy, len(addr))
@@ -626,9 +646,11 @@ def build_sheet(J, Cx, Cy, sheet):
             bot = yb + 8.03 - 7.40
             J.cp([TLMNOTE['box']], 0, 0, edit=[dict(vertices=[pt(ix, top), pt(ix + TLM_W, top), pt(ix + TLM_W, bot), pt(ix, bot)])])
     top = Cy - 100
-    for calc in sheet.get('calcs') or []:
+    for n, calc in enumerate(sheet.get('calcs') or []):
+        J.tag(part='calc', box=n)
         top = build_calc(J, Cx, top, calc) - 10
-    for rs in sheet.get('rspans') or []:            # RULING SPAN boxes under the calcs
+    for n, rs in enumerate(sheet.get('rspans') or []):            # RULING SPAN boxes under the calcs
+        J.tag(part='rspan', box=n)
         top = build_rspan(J, Cx, top, rs) - 10
 
 
@@ -724,12 +746,15 @@ def build_job(spec):
             xs = [Cx + 300 if slot == 'R' else Cx - 300]
         else:
             xs = [Cx - 300, Cx + 300]
-        for P, prof in zip(xs, profiles):
+        J.ctx = dict(pole=pole['pole'], frame=idx, Cx=Cx, Cy=Cy)
+        for pi, (P, prof) in enumerate(zip(xs, profiles)):
+            J.tag(profile=pi)
             prof = _copy.deepcopy(prof)
             prof['num'] = pole['pole']
             build_pole(J, P, Cy, prof)
         if spec.get('tlm_extra'):
             pole = dict(pole, tlm_extra=spec['tlm_extra'])
+        J.ctx = dict(pole=pole['pole'], frame=idx, Cx=Cx, Cy=Cy, part='sheet')
         build_sheet(J, Cx, Cy, pole)
         J.edit_existing(NAME_HANDLES[idx], dict(text=pole['pole']))
         if idx in ROW3_SHEET_NUMBERS:

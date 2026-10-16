@@ -19,7 +19,7 @@ civil3d_entity            action=apply jobFile=<same path> approvalToken=<token>
 ```
 
 The old-to-new handle map lands next to the job as `job_TD2536120.result.json`
-for the measure-and-fix pass.
+for `qc.py` (see below).
 
 ## Spec format
 
@@ -97,8 +97,32 @@ addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
   them in the spec as `"tlm_extra": [address text, meter text, box polyline, divider line]`; `pick_tlm_extra(entities)`
   picks them out of the query result (it also returns rows 11 and 13).
 
-## Not generated
+## QC after the apply (qc.py)
 
-Calc boxes are estimated: re-fit and re-center them after measuring.
-Note box widths and DG leader ends use text width estimates: measure them after
-the job and fix them in one edit batch.
+Box widths, calc centering and DG leader ends are estimated from text widths, so
+they are checked against the drawing after the job runs. `qc.py` does that and
+the rest of the mechanical checks, and prints only failures:
+
+```
+python qc.py spec.json job_TD2536120.json job_TD2536120.result.json query.json --fix fix_TD2536120.json
+```
+
+- `query.json`: a `civil3d_entity` query over the used frames, types TEXT,
+  LWPOLYLINE, LEADER, DIMENSION, INSERT, includeGeometry true. A saved tool
+  output file can be passed as it is. Several files are fine.
+- It rebuilds the job from the spec and stops if that does not match the job
+  file, so every new handle is known for what it is.
+- Checks: every text, dim text, attribute, visibility, layer and color edit
+  landed; text overlaps; guys or leaders through text; crossing leaders; one
+  callout column per profile; dim labels clear of each other and of callouts;
+  note, calc and ruling span boxes fit their measured text (calcs and ruling
+  spans centered on the sheet); TLM notes inside their box; DG leader ends 2.8
+  from the measured text edge with the arrow on a guy; DG callouts 30 apart;
+  note text rules in the spec.
+- `--fix`: box refits, calc re-centering (moves) and DG leader re-points as an
+  apply job, ready to approve and run. Everything else is reported for a fix
+  by hand.
+- It cannot tell whether the spec matches the PDF (heights, slant, box sides,
+  symbols, L/xx). A clean run means the drawing matches the spec and the rules.
+- Entities it cannot find in the query are counted and not checked: widen the
+  window or types and run it again.
