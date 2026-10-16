@@ -379,16 +379,20 @@ def place_item(J, P, r, it, sc):
             cp_fhla(J, P, r, SRC['fhla_on_box']['h'], it['fhla'] == 'R', left_edge=P - 5)   # dead end boxes P - 5 to P + 5
     else:
         raise ValueError('unknown item type %r' % t)
-    if it.get('box'):                                      # lone SIDE XARM (guard arm) hanging just below the row line
+    if it.get('box'):
+        # lone SIDE XARM (guard arm): CENTERED on its row, so the middle of the wall on the dim side sits on the dim
+        # point. With an omni switch the box hangs just below the row line (box top on the line) and the omni sits
+        # at the box center height (template example: omni 4690.0843 and box 4695.0843, both at -1596.6283).
         src = SRC['sbox']
-        J.cp(src['h'], P - src['px'], r - 2.5 - src['py'], mirror=P if it['box'] == 'L' else None)
+        by = r - 2.5 if it.get('omni') else r
+        J.cp(src['h'], P - src['px'], by - src['py'], mirror=P if it['box'] == 'L' else None)
         if (1 if it['box'] == 'R' else -1) == sc:
             a = max(a, 5)
         if it.get('omni'):
             # INV OMNI CLOSED (2E344E, template orientation): insertion exactly 5 beside the SIDE XARM insertion
             # (box center P +/- 2.5, row y), on the side the box is on
             d = 1 if it['box'] == 'R' else -1
-            J.cp(['2E344E'], (P + d * 7.5) - 4580.5129, r - (-1596.6283))
+            J.cp(['2E344E'], (P + d * 7.5) - 4580.5129, by - (-1596.6283))
     if t == 'dot' or it.get('dot'):
         src = SRC['dot']
         J.cp(src['h'], P - src['px'], r - src['py'])
@@ -474,8 +478,9 @@ def build_pole(J, P, G, spec):
     # guys and anchors
     if anchors:
         J.tag(part='anchor')
-        anchors.sort(key=lambda a: abs(a['x'] - P))
-        for i, a in enumerate(anchors):
+        # guys[].an and qp 'an' index the anchors AS LISTED in the spec; never sort the list itself
+        by_dist = sorted(anchors, key=lambda a: abs(a['x'] - P))
+        for i, a in enumerate(by_dist):
             J.cp([ARC[0]], a['x'] - ARC[1], G + 2 - ARC[2])
             J.cp([LDIM[0]], P - LDIM[1], G - LDIM[2], edit=[dict(
                 xLine1=pt(a['x'], G), xLine2=pt(P, G), dimLine=pt(P, G - 12 * (i + 1)),
@@ -532,8 +537,8 @@ def build_pole(J, P, G, spec):
             J.cp([LEADER[0]], P - LEADER[1], yt - LEADER[2], edit=[dict(
                 vertices=[pt(gx(g, ay), ay), pt(elb, yt + 3), pt(endx, yt + 3)])])
         J.tag(part='anclabel')
-        far_a = anchors[-1]
-        lab = sorted([a for a in anchors if a.get('c')], key=lambda a: 0 if a is far_a else 1)
+        far_a = by_dist[-1]
+        lab = sorted([a for a in by_dist if a.get('c')], key=lambda a: 0 if a is far_a else 1)
         for i, a in enumerate(lab):
             yb = G + 1.6 + 8 * i
             lx = far_a['x'] + gs * 6

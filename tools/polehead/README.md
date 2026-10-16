@@ -63,8 +63,9 @@ for `qc.py` (see below).
     of that slot is left out, so nothing has to be erased. Example: `"slant": {"3": "R"}`.
   - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
     `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
-  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM (guard arm) beside the pole, hanging just below that row's
-    line (box top on the line, insertion 2.5 below the row).
+  - `box: "R"` / `"L"` on any item adds a lone SIDE XARM (guard arm) beside the pole, centered on that row (the
+    middle of its wall on the dim point). With `omni` the box hangs just below the row line and the omni sits at the box center.
+  - Pins drawn with a circle at their base (4/C arms on Builder pages): use `arm` with `pins` AND `circ` (e.g. `[0,1,2,3]` both).
   - `omni: true` with `box`: INV OMNI CLOSED with its insertion 5 beside the SIDE XARM insertion, on the box's side (HZ INV OMNI SW).
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
   - `rcs` RCS CONTROL BOX: template rectangle 2E3432 centered on its row, `k` `L`/`R` beside the pole (never mirrored).
@@ -75,7 +76,7 @@ for `qc.py` (see below).
     `via: <qp index>` run from the pole to the QP end; one more guy runs from the QP end down to the anchor.
     Callout text `QUEENS POST`.
   - `o`: tie-break order for two items at the same height.
-- `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed.
+- `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed (any order; the generator never reorders the list).
 
 ## Rules built in
 
