@@ -69,13 +69,19 @@ for `qc.py` (see below).
   - `omni: true` with `box`: INV OMNI CLOSED with its insertion 5 beside the SIDE XARM insertion, on the box's side (HZ INV OMNI SW).
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
   - `rcs` RCS CONTROL BOX: template rectangle 2E3432 centered on its row, `k` `L`/`R` beside the pole (never mirrored).
-  - `gal` guard arm drawn as a line through the pole: the 35 long line 2E3922 centered on the pole.
+  - `gal` guard arm drawn as a line through the pole: the 35 long line 2E3922 centered on the pole. `dots: [4.5, 10, 15.5]`
+    hangs SEC-MISC dots (template 2A500C) under the line at those offsets from the pole (comm on a guard arm).
+  - `ph` PH & LA (pothead): the template example group copied as is, `k: "L"` left leaning PH (box right of the
+    pole, SA beyond it, PH left; 2E3866/2E386B/2E386D) or `k: "R"` right leaning PH (2E3811/2E386C/2E386E). Never use `fhla` for a PH.
   - `top: true` on `de1`/`de2`: X CONDs both ways from the pin tops too, when the PDF draws arrows over the dead end pins.
   - `riser` TOR: riser box (2A4127) from the ground to its row, `k` `C` centered on the pole (pole runs through it), `R`/`L` beside it. Callout `TOR`.
   - `qp` QUEENS POST: a line at its row from the pole out to its anchor's distance (`an`, or its own `L`). Guys with
     `via: <qp index>` run from the pole to the QP end; one more guy runs from the QP end down to the anchor.
     Callout text `QUEENS POST`.
   - `o`: tie-break order for two items at the same height.
+- Anchor labels: the far anchor's at ground, the others stacked above from the farthest to the nearest (leaders never
+  cross), each raised until its leader's arrow segment is at least 15.1 long (shorter and the arrowhead does not draw).
+  Bearings written on the PDF go in the label (`EX: CATV ANC 122%%D`).
 - `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed (any order; the generator never reorders the list).
 
 ## Rules built in
