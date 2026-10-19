@@ -119,6 +119,12 @@ SG_LEN = 33.76
 RCS = ('2E3432', 4784.9005, -2011.4173)            # RCS control box rectangle: left edge, center y
 RCS_W = 6.5467
 GALINE = ('2E3922', 4767.4005, -2151.7964)        # 35 long guard arm line: start (left end)
+GALDOT = ('2A500C', 3805.6404, -386.763)          # SEC-MISC hanging under a guard arm line (insertion x, LINE y)
+# PH & LA side view (template examples): SIDE XARM + SURGE ARRESTER + POTHEAD, (handles, side pole x, row y,
+# extent right of the pole, extent left of the pole). 'L' = left leaning PH, 'R' = right leaning PH.
+PH = {'L': (['2E3866', '2E386B', '2E386D'], 5333.5588, -1291.8281, 6.9924, 3.8930),
+      'R': (['2E3811', '2E386C', '2E386E'], 5264.5156, -1291.6289, 3.8930, 6.9924)}
+ANC_LEADER_MIN = 15.1                               # shorter and the leader arrowhead does not draw
 RISER_W = 3.4169
 COL_GAP = 5.75                                    # callout column clearance past the farthest equipment
 COL_MIN = 30.75                                   # never closer than an X COND tip (25) + gap
@@ -304,6 +310,13 @@ def place_item(J, P, r, it, sc):
         # guard arm drawn as a line through the pole in the PDF: 35 long LINE 2E3922, centered on the pole
         J.cp([GALINE[0]], (P - 17.5) - GALINE[1], r - GALINE[2])
         a = 17.5
+        for ox in it.get('dots', []):                  # SEC-MISC dots hanging under the line (offsets from the pole)
+            J.cp([GALDOT[0]], (P + ox) - GALDOT[1], r - GALDOT[2])
+    elif t == 'ph':
+        # PH & LA: copy the template example group as is, k 'L' (left leaning PH) or 'R' (right leaning PH)
+        hs, px, py, ext_r, ext_l = PH[k]
+        J.cp(hs, P - px, r - py)
+        a = ext_r if sc > 0 else ext_l
     elif t in ('dot', 'none'):
         pass                                               # dot: handled below; none: only a 'box' (guard arm, comm box)
     elif t == 'riser':
@@ -538,10 +551,21 @@ def build_pole(J, P, G, spec):
                 vertices=[pt(gx(g, ay), ay), pt(elb, yt + 3), pt(endx, yt + 3)])])
         J.tag(part='anclabel')
         far_a = by_dist[-1]
-        lab = sorted([a for a in by_dist if a.get('c')], key=lambda a: 0 if a is far_a else 1)
+        # far anchor's label at ground, then the others from the farthest up to the nearest, so leaders never cross
+        lab = sorted([a for a in by_dist if a.get('c')], key=lambda a: (0, 0) if a is far_a else (1, -abs(a['x'] - P)))
+        lx = far_a['x'] + gs * 6
+        ybs, prev = [], None
+        for a in lab:
+            yb = G + 1.6 if prev is None else prev + 8
+            if a is not far_a:
+                # leader arrow segment (anchor to elbow) at least ANC_LEADER_MIN long, or the arrowhead does not draw
+                ddx = (lx - gs * 5.8) - (a['x'] + gs * 1.2)
+                while (ddx ** 2 + (yb + 3 - (G + 1.5)) ** 2) ** 0.5 < ANC_LEADER_MIN:
+                    yb += 4
+            ybs.append(yb)
+            prev = yb
         for i, a in enumerate(lab):
-            yb = G + 1.6 + 8 * i
-            lx = far_a['x'] + gs * 6
+            yb = ybs[i]
             J.cp([ANCTXT[0]], lx - ANCTXT[1], yb - ANCTXT[2], mirror=lx if gs < 0 else None,
                  edit=[dict(text=a['c'], colorIndex=color_for(a['c']))])
             if a is not far_a:
