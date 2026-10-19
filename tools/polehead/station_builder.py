@@ -26,7 +26,14 @@ def clean(t):
 def read_rows(xlsx, pole):
     import openpyxl
     wb = openpyxl.load_workbook(xlsx, data_only=True, read_only=True)
-    ws = wb[pole]
+    if pole in wb.sheetnames:
+        ws = wb[pole]
+    else:
+        # tabs are sometimes suffixed, e.g. "1296855E - EXTREME" or "1754156E EXTREME"
+        hits = [n for n in wb.sheetnames if n.split()[0].upper() == pole.upper()]
+        if len(hits) != 1:
+            raise KeyError(pole)
+        ws = wb[hits[0]]
     return [tuple(c.value for c in row) for row in ws.iter_rows(min_row=4, max_row=46, min_col=14, max_col=16)]
 
 
