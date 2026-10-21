@@ -371,7 +371,10 @@ def place_item(J, P, r, it, sc):
         if it.get('slant'):
             raise ValueError('%s: slant is only supported on arm, arm2 and arm4' % t)
         src = SRC['fhlaf_sa' if t == 'fhlaf' and it.get('ends') == 'sa' else t]
-        J.cp(src['h'], P - src['px'], r - src['py'])
+        hs = src['h']
+        if it.get('nosa'):                  # FH arm with outer CUTOUTs only, no surge arresters drawn
+            hs = [h for h in hs if h not in ('2E3830', '2E3832')]
+        J.cp(hs, P - src['px'], r - src['py'])
         a = 35
     elif t in ('de1', 'de2'):
         src = SRC['de1']

@@ -395,6 +395,218 @@ public static class EntityCommands
     });
   }
 
+  // ----------------------------------------------------------------- hatch
+
+  /// <summary>
+  /// Creates hatches from boundary entities (LWPOLYLINEs or circles, each one a
+  /// loop; open polylines are closed with a straight segment) and/or explicit
+  /// vertex loops. Pattern, scale, angle, style, layer and color can be copied
+  /// from an existing hatch ("like") and overridden per hatch. Hatches are
+  /// non-associative, so later edits to the boundaries do not move them.
+  /// </summary>
+  public static Task<object?> CreateHatchesAsync(JsonObject? parameters)
+  {
+    if (PluginRuntime.GetParameter(parameters, "hatches") is not JsonArray specs || specs.Count == 0)
+    {
+      throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", "createHatches requires a non-empty hatches array.");
+    }
+
+    return CivilExecution.WriteAsync<object?>((doc, civilDoc, database, transaction) =>
+    {
+      var created = new List<Dictionary<string, object?>>();
+      for (var index = 0; index < specs.Count; index++)
+      {
+        if (specs[index] is not JsonObject spec)
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: must be an object.");
+        }
+
+        var loops = new List<(Point2dCollection Points, DoubleCollection Bulges)>();
+        foreach (var handle in ReadStringList(spec["boundaries"]))
+        {
+          var boundary = transaction.GetObject(GetIdFromHandle(database, handle), OpenMode.ForRead);
+          loops.Add(LoopFromEntity(boundary, index, handle));
+        }
+
+        if (spec["loops"] is JsonArray rawLoops)
+        {
+          for (var l = 0; l < rawLoops.Count; l++)
+          {
+            var points = new List<Point2d>();
+            if (rawLoops[l] is JsonArray rawPoints)
+            {
+              foreach (var rawPoint in rawPoints)
+              {
+                points.Add(ReadPoint(rawPoint) ?? throw new JsonRpcDispatchException(
+                  "CIVIL3D.INVALID_INPUT", $"Hatch {index}: loops[{l}] has a point without numeric x and y."));
+              }
+            }
+
+            if (points.Count < 3)
+            {
+              throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: loops[{l}] needs at least 3 points.");
+            }
+
+            loops.Add(CloseLoop(points, points.Select(_ => 0.0).ToList(), true));
+          }
+        }
+
+        if (loops.Count == 0)
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: needs boundaries and/or loops.");
+        }
+
+        Hatch? like = null;
+        var likeHandle = PluginRuntime.GetOptionalString(spec, "like");
+        if (!string.IsNullOrWhiteSpace(likeHandle))
+        {
+          like = transaction.GetObject(GetIdFromHandle(database, likeHandle), OpenMode.ForRead) as Hatch
+            ?? throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: 'like' handle {likeHandle} is not a hatch.");
+        }
+
+        var space = ResolveSpace(database, transaction, PluginRuntime.GetOptionalString(spec, "space"), OpenMode.ForWrite);
+        var hatch = new Hatch();
+        hatch.SetDatabaseDefaults(database);
+        space.Record.AppendEntity(hatch);
+        transaction.AddNewlyCreatedDBObject(hatch, true);
+
+        if (like != null)
+        {
+          hatch.Layer = like.Layer;
+          hatch.Color = like.Color;
+          hatch.LinetypeId = like.LinetypeId;
+          hatch.LineWeight = like.LineWeight;
+          hatch.HatchStyle = like.HatchStyle;
+        }
+
+        var pattern = PluginRuntime.GetOptionalString(spec, "pattern") ?? like?.PatternName ?? "ANSI31";
+        var patternType = like != null && pattern.Equals(like.PatternName, StringComparison.OrdinalIgnoreCase)
+          ? like.PatternType
+          : HatchPatternType.PreDefined;
+        var angleDeg = PluginRuntime.GetOptionalDouble(spec, "angleDeg");
+        hatch.PatternAngle = angleDeg.HasValue ? angleDeg.Value * Math.PI / 180.0 : like?.PatternAngle ?? 0.0;
+        hatch.PatternScale = PluginRuntime.GetOptionalDouble(spec, "scale") ?? like?.PatternScale ?? 1.0;
+        if (hatch.PatternScale <= 0)
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: scale must be positive.");
+        }
+
+        hatch.SetHatchPattern(patternType, pattern);
+
+        var layer = PluginRuntime.GetOptionalString(spec, "layer");
+        if (!string.IsNullOrWhiteSpace(layer))
+        {
+          hatch.Layer = layer;
+        }
+
+        var colorIndex = PluginRuntime.GetOptionalInt(spec, "colorIndex");
+        if (colorIndex != null)
+        {
+          if (colorIndex < 0 || colorIndex > 256)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: colorIndex must be 0-256 (0 = ByBlock, 256 = ByLayer).");
+          }
+
+          hatch.ColorIndex = colorIndex.Value;
+        }
+
+        hatch.Associative = false;
+        foreach (var (points, bulges) in loops)
+        {
+          hatch.AppendLoop(HatchLoopTypes.Polyline, points, bulges);
+        }
+
+        hatch.EvaluateHatch(true);
+        created.Add(new Dictionary<string, object?>
+        {
+          ["index"] = index,
+          ["handle"] = hatch.Handle.ToString(),
+          ["pattern"] = hatch.PatternName,
+          ["scale"] = R(hatch.PatternScale),
+          ["angleDeg"] = R(hatch.PatternAngle * 180.0 / Math.PI),
+          ["loops"] = loops.Count,
+          ["layer"] = hatch.Layer,
+        });
+      }
+
+      return new Dictionary<string, object?>
+      {
+        ["hatches"] = created,
+        ["count"] = created.Count,
+      };
+    });
+  }
+
+  private static (Point2dCollection Points, DoubleCollection Bulges) LoopFromEntity(DBObject entity, int index, string handle)
+  {
+    switch (entity)
+    {
+      case Polyline polyline:
+      {
+        var points = new List<Point2d>();
+        var bulges = new List<double>();
+        for (var i = 0; i < polyline.NumberOfVertices; i++)
+        {
+          points.Add(polyline.GetPoint2dAt(i));
+          bulges.Add(polyline.GetBulgeAt(i));
+        }
+
+        if (points.Count < 2)
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: boundary {handle} has fewer than 2 vertices.");
+        }
+
+        return CloseLoop(points, bulges, polyline.Closed);
+      }
+      case Circle circle:
+      {
+        var c = circle.Center;
+        var r = circle.Radius;
+        return CloseLoop(
+          new List<Point2d> { new(c.X + r, c.Y), new(c.X - r, c.Y) },
+          new List<double> { 1.0, 1.0 },
+          true);
+      }
+      default:
+        throw new JsonRpcDispatchException(
+          "CIVIL3D.INVALID_INPUT",
+          $"Hatch {index}: boundary {handle} is a {entity.GetType().Name}; use LWPOLYLINEs or circles, or give explicit loops.");
+    }
+  }
+
+  /// <summary>
+  /// Builds an explicitly closed hatch polyline loop. bulges[k] is the bulge of
+  /// the segment from points[k] to points[k + 1]; the last one is the closing
+  /// segment when closed is true (straight otherwise). A duplicate closing
+  /// vertex is folded in, so a polyline drawn back onto its start works too.
+  /// </summary>
+  private static (Point2dCollection Points, DoubleCollection Bulges) CloseLoop(List<Point2d> points, List<double> bulges, bool closed)
+  {
+    if (points.Count > 2 && points[0].GetDistanceTo(points[^1]) < 1e-6)
+    {
+      points.RemoveAt(points.Count - 1);
+      bulges.RemoveAt(bulges.Count - 1);
+      closed = true;
+    }
+
+    if (!closed)
+    {
+      bulges[^1] = 0.0;
+    }
+
+    var outPoints = new Point2dCollection();
+    var outBulges = new DoubleCollection();
+    for (var i = 0; i < points.Count; i++)
+    {
+      outPoints.Add(points[i]);
+      outBulges.Add(bulges[i]);
+    }
+
+    outPoints.Add(points[0]);
+    outBulges.Add(0.0);
+    return (outPoints, outBulges);
+  }
+
   // --------------------------------------------------------------- helpers
 
   private sealed record SpaceInfo(string Name, BlockTableRecord Record);

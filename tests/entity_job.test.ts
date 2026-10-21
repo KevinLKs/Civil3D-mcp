@@ -42,6 +42,10 @@ function fakePlugin() {
     }
     if (method === "editEntities") return { edits: (payload.edits as unknown[]).map((_, index) => ({ index })) };
     if (method === "eraseEntities") return { count: (payload.handles as unknown[]).length };
+    if (method === "createHatches") {
+      const hatches = payload.hatches as unknown[];
+      return { hatches: hatches.map((_, index) => ({ index, handle: (next++).toString(16).toUpperCase() })), count: hatches.length };
+    }
     throw new Error(`unexpected ${method}`);
   };
   return { calls, send };
@@ -75,6 +79,30 @@ describe("entity jobs", () => {
       { handle: "FFF", colorIndex: 1 },
     ]);
     expect(calls[2].payload.handles).toEqual(["ABC", "101"]);
+  });
+
+  it("runs hatches after edits with boundary and like refs resolved", async () => {
+    const job = validateJob({
+      copies: [{ id: "d", handles: ["39258A", "39258B", "39258C"], dx: 5, dy: 5 }],
+      edits: [{ ref: "d:39258B", vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }] }],
+      hatches: [{ boundaries: [{ ref: "d:39258B" }, { ref: "d:39258C" }, "ABC"], like: { ref: "d:39258A" }, scale: 2 }],
+      erase: [{ ref: "d:39258A" }],
+    });
+    const { calls, send } = fakePlugin();
+    const result = await runEntityJob(job, send);
+
+    expect(result.status).toBe("completed");
+    expect(calls.map((call) => call.method)).toEqual(["copyEntities", "editEntities", "createHatches", "eraseEntities"]);
+    expect(calls[2].payload.hatches).toEqual([{ scale: 2, boundaries: ["101", "102", "ABC"], like: "100" }]);
+    expect(result.hatched).toBe(1);
+    expect(result.hatchHandles).toEqual(["103"]);
+    expect(calls[3].payload.handles).toEqual(["100"]);
+  });
+
+  it("rejects hatches without boundaries or loops, and bad hatch refs", () => {
+    expect(() => validateJob({ hatches: [{ like: "39258A" }] })).toThrow(/boundaries and\/or loops/);
+    expect(() => validateJob({ hatches: [{ boundaries: [{ ref: "zz:1F" }] }] })).toThrow(/unknown copy id/);
+    expect(() => validateJob({ hatches: [{ boundaries: ["XYZ"] }] })).toThrow(/hex handle/);
   });
 
   it("rejects bad refs before touching the drawing", () => {
