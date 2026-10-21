@@ -297,6 +297,18 @@ public static class EntityCommands
           changed.Add("vertices");
         }
 
+        var closed = edit["closed"]?.GetValue<bool>();
+        if (closed != null)
+        {
+          if (entity is not Polyline closable)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: closed applies to LWPOLYLINEs only.");
+          }
+
+          closable.Closed = closed.Value;
+          changed.Add("closed");
+        }
+
         // Rotation about the entity's own insertion point, in degrees CCW.
         var rotationDeg = edit["rotationDeg"]?.GetValue<double>();
         if (rotationDeg != null)
