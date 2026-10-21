@@ -297,6 +297,18 @@ public static class EntityCommands
           changed.Add("vertices");
         }
 
+        var closed = edit["closed"]?.GetValue<bool>();
+        if (closed != null)
+        {
+          if (entity is not Polyline closable)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: closed applies to LWPOLYLINEs only.");
+          }
+
+          closable.Closed = closed.Value;
+          changed.Add("closed");
+        }
+
         // Rotation about the entity's own insertion point, in degrees CCW.
         var rotationDeg = edit["rotationDeg"]?.GetValue<double>();
         if (rotationDeg != null)
@@ -491,7 +503,7 @@ public static class EntityCommands
           throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: scale must be positive.");
         }
 
-        hatch.SetHatchPattern(patternType, pattern);
+        Step(index, $"set pattern {pattern}", () => hatch.SetHatchPattern(patternType, pattern));
 
         var layer = PluginRuntime.GetOptionalString(spec, "layer");
         if (!string.IsNullOrWhiteSpace(layer))
@@ -511,12 +523,13 @@ public static class EntityCommands
         }
 
         hatch.Associative = false;
-        foreach (var (points, bulges) in loops)
+        for (var l = 0; l < loops.Count; l++)
         {
-          hatch.AppendLoop(HatchLoopTypes.Polyline, points, bulges);
+          var (points, bulges) = loops[l];
+          AppendPolylineLoop(hatch, points, bulges, index, l);
         }
 
-        hatch.EvaluateHatch(true);
+        Step(index, "evaluate hatch", () => hatch.EvaluateHatch(true));
         created.Add(new Dictionary<string, object?>
         {
           ["index"] = index,
@@ -535,6 +548,45 @@ public static class EntityCommands
         ["count"] = created.Count,
       };
     });
+  }
+
+  /// <summary>
+  /// Appends a polyline loop. AutoCAD versions differ on whether the closing
+  /// vertex may repeat the first one, so try with it and fall back to without.
+  /// </summary>
+  private static void AppendPolylineLoop(Hatch hatch, Point2dCollection points, DoubleCollection bulges, int index, int loop)
+  {
+    try
+    {
+      hatch.AppendLoop(HatchLoopTypes.Polyline, points, bulges);
+      return;
+    }
+    catch (Autodesk.AutoCAD.Runtime.Exception)
+    {
+      // fall through: retry without the repeated closing vertex
+    }
+
+    var open = new Point2dCollection();
+    var openBulges = new DoubleCollection();
+    for (var i = 0; i < points.Count - 1; i++)
+    {
+      open.Add(points[i]);
+      openBulges.Add(bulges[i]);
+    }
+
+    Step(index, $"append loop {loop} ({open.Count} vertices)", () => hatch.AppendLoop(HatchLoopTypes.Polyline, open, openBulges));
+  }
+
+  private static void Step(int index, string what, Action action)
+  {
+    try
+    {
+      action();
+    }
+    catch (Autodesk.AutoCAD.Runtime.Exception ex)
+    {
+      throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: {what} failed: {ex.ErrorStatus}.");
+    }
   }
 
   private static (Point2dCollection Points, DoubleCollection Bulges) LoopFromEntity(DBObject entity, int index, string handle)
