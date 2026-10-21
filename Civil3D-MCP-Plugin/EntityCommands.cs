@@ -519,6 +519,13 @@ public static class EntityCommands
         Step(index, $"set scale {scale}", () => hatch.PatternScale = scale);
         Step(index, $"set angle {angle}", () => hatch.PatternAngle = angle);
         Step(index, "re-apply pattern", () => hatch.SetHatchPattern(hatch.PatternType, hatch.PatternName));
+        // Island style goes on before any loop: changing it after EvaluateHatch
+        // and evaluating again fails with eInvalidInput.
+        if (like != null && hatch.HatchStyle != like.HatchStyle)
+        {
+          Step(index, $"copy hatch style {like.HatchStyle}", () => hatch.HatchStyle = like.HatchStyle);
+        }
+
         if (useObjects)
         {
           Step(index, "set associative", () => hatch.Associative = true);
@@ -545,11 +552,6 @@ public static class EntityCommands
           Step(index, "copy color", () => hatch.Color = like.Color);
           Step(index, "copy linetype", () => hatch.LinetypeId = like.LinetypeId);
           Step(index, "copy lineweight", () => hatch.LineWeight = like.LineWeight);
-          if (hatch.HatchStyle != like.HatchStyle)
-          {
-            Step(index, "copy hatch style", () => hatch.HatchStyle = like.HatchStyle);
-            Step(index, "re-evaluate hatch", () => hatch.EvaluateHatch(true));
-          }
         }
 
         var layer = PluginRuntime.GetOptionalString(spec, "layer");
