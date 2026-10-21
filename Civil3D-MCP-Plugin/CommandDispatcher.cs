@@ -37,6 +37,7 @@ public static class CommandDispatcher
       "copyEntities" => EntityCommands.CopyEntitiesAsync(parameters),
       "editEntities" => EntityCommands.EditEntitiesAsync(parameters),
       "eraseEntities" => EntityCommands.EraseEntitiesAsync(parameters),
+      "createHatches" => EntityCommands.CreateHatchesAsync(parameters),
       "listCivilObjectTypes" => DrawingCommands.ListCivilObjectTypesAsync(),
       "getSelectedCivilObjectsInfo" => DrawingCommands.GetSelectedCivilObjectsInfoAsync(parameters),
       "getJobStatus" => Task.FromResult<object?>(JobCommands.GetJobStatus(parameters)),

@@ -47,6 +47,18 @@ const EditSchema = z.object({
   layer: z.string().optional(),
 });
 
+const HatchSchema = z.object({
+  boundaries: z.array(HandleSchema).optional().describe("Boundary entities, one loop each: LWPOLYLINEs (open ones are closed with a straight segment) or circles."),
+  loops: z.array(z.array(Point2DSchema).min(3)).optional().describe("Extra loops as vertex lists (straight segments, closed automatically)."),
+  like: HandleSchema.optional().describe("Existing hatch to copy pattern, scale, angle, style, layer and color from."),
+  pattern: z.string().optional().describe("Pattern name, e.g. ANSI31 (default: like's pattern, else ANSI31)."),
+  scale: z.number().positive().optional().describe("Pattern scale (default: like's, else 1)."),
+  angleDeg: z.number().optional().describe("Pattern angle in degrees (default: like's, else 0)."),
+  layer: z.string().optional(),
+  colorIndex: z.number().int().min(0).max(256).optional().describe("ACI color: 0 = ByBlock, 256 = ByLayer."),
+  space: SpaceSchema.optional(),
+});
+
 const QueryArgs = z.object({
   action: z.literal("query"),
   space: SpaceSchema.optional(),
@@ -60,6 +72,7 @@ const QueryArgs = z.object({
 const CopyArgs = z.object({ action: z.literal("copy"), operations: z.array(CopyOperationSchema).min(1) });
 const EditArgs = z.object({ action: z.literal("edit"), edits: z.array(EditSchema).min(1) });
 const EraseArgs = z.object({ action: z.literal("erase"), handles: z.array(HandleSchema).min(1) });
+const HatchArgs = z.object({ action: z.literal("hatch"), hatches: z.array(HatchSchema).min(1) });
 const ApplyArgs = z.object({
   action: z.literal("apply"),
   jobFile: z.string().min(1).optional(),
@@ -71,7 +84,8 @@ const ApplyArgs = z.object({
 
 const JobFileDescription =
   "apply: absolute path to a .json job file on this machine: {version:1, copies:[{id, handles|window, dx, dy, mirrorX?, mode?, space?}], " +
-  "edits:[{handle|ref:\"<copyId>:<sourceHandle>\", ...edit fields}], erase:[handle | {ref}]}. Approval is bound to the file's SHA-256, " +
+  "edits:[{handle|ref:\"<copyId>:<sourceHandle>\", ...edit fields}], hatches:[{boundaries:[handle | {ref}], like?: handle | {ref}, pattern?, scale?, angleDeg?, layer?}], " +
+  "erase:[handle | {ref}]}. Stages run copies, edits, hatches, erase. Approval is bound to the file's SHA-256, " +
   "so edit the file and the token is void. The full old-to-new handle map is written beside it as <name>.result.json.";
 
 const send = (method: string, payload: Record<string, unknown>) =>
@@ -123,6 +137,16 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
       pluginMethods: ["eraseEntities"],
       execute: async (args) => await send("eraseEntities", { handles: (args as z.infer<typeof EraseArgs>).handles }),
     },
+    hatch: {
+      action: "hatch",
+      inputSchema: HatchArgs,
+      responseSchema: GenericResponseSchema,
+      capabilities: ["create"],
+      requiresActiveDrawing: true,
+      safeForRetry: false,
+      pluginMethods: ["createHatches"],
+      execute: async (args) => await send("createHatches", { hatches: (args as z.infer<typeof HatchArgs>).hatches }),
+    },
     apply: {
       action: "apply",
       inputSchema: ApplyArgs,
@@ -130,7 +154,7 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
       capabilities: ["create", "edit", "delete"],
       requiresActiveDrawing: true,
       safeForRetry: false,
-      pluginMethods: ["copyEntities", "editEntities", "eraseEntities"],
+      pluginMethods: ["copyEntities", "editEntities", "createHatches", "eraseEntities"],
       execute: async (args) => {
         const { jobFile, job, includeHandleMap } = args as z.infer<typeof ApplyArgs>;
         const file = jobFile ? readJobFile(jobFile) : undefined;
@@ -165,10 +189,11 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
         "copy: batch copy or move entities by handles and/or window with a dx/dy offset and optional mirror; returns old-to-new handle maps. " +
         "edit: batch change text, attribute values, vertices/endpoints, dimension points, color, linetype or layer by handle. " +
         "erase: delete entities by handle. " +
-        "apply: run a whole job (copies, then edits and erases that may reference the new copies as \"<copyId>:<sourceHandle>\") from a JSON file in one call; " +
+        "hatch: create non-associative hatches from boundary polylines/circles or vertex loops, matching an existing hatch's pattern, scale and angle via 'like'. " +
+        "apply: run a whole job (copies, then edits, hatches and erases that may reference the new copies as \"<copyId>:<sourceHandle>\") from a JSON file in one call; " +
         "approval binds to the file hash, so the request stays tiny. Batch copy and edit work so one approval covers a whole detail.",
       inputShape: {
-        action: z.enum(["query", "copy", "edit", "erase", "apply"]),
+        action: z.enum(["query", "copy", "edit", "erase", "hatch", "apply"]),
         space: SpaceSchema.optional(),
         window: WindowSchema.optional(),
         crossing: z.boolean().optional(),
@@ -179,11 +204,12 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
         operations: z.array(CopyOperationSchema).optional(),
         edits: z.array(EditSchema).optional(),
         handles: z.array(HandleSchema).optional(),
+        hatches: z.array(HatchSchema).optional().describe("hatch: hatches to create."),
         jobFile: z.string().min(1).optional().describe(JobFileDescription),
         job: z.record(z.unknown()).optional().describe("apply: inline job object (same format as jobFile) for small jobs."),
         includeHandleMap: z.boolean().optional().describe("apply: also return the full old-to-new handle map inline."),
       },
-      supportedActions: ["query", "copy", "edit", "erase", "apply"],
+      supportedActions: ["query", "copy", "edit", "erase", "hatch", "apply"],
       resolveAction: (rawArgs) => ({ action: String(rawArgs.action ?? ""), args: rawArgs }),
     },
   ],

@@ -13,8 +13,12 @@ import path from "node:path";
  *   "version": 1,
  *   "copies": [{ "id": "p1", "handles": ["2A4BC2"], "dx": 10, "dy": 0, "mirrorX": 5, "mode": "copy" }],
  *   "edits":  [{ "ref": "p1:2A4BC2", "text": "NEW" }, { "handle": "1F00", "colorIndex": 1 }],
+ *   "hatches": [{ "boundaries": [{ "ref": "p1:39258B" }, "1F02"], "like": "39258A" }],
  *   "erase":  ["1F01", { "ref": "p1:2A4BC3" }]
  * }
+ *
+ * Stages run in order: copies, edits, hatches (so hatch boundaries can be
+ * copied and edited first), erase.
  */
 
 export const MAX_JOB_FILE_BYTES = 8 * 1024 * 1024;
@@ -30,8 +34,11 @@ export interface EntityJob {
   version?: number;
   copies?: EntityJobCopy[];
   edits?: JsonObject[];
+  hatches?: JsonObject[];
   erase?: Array<string | { ref?: string; handle?: string }>;
 }
+
+type HandleOrRef = string | { ref?: string; handle?: string };
 
 export class EntityJobError extends Error {
   public readonly code = "CIVIL3D.INVALID_INPUT";
@@ -94,7 +101,7 @@ export function validateJob(job: unknown): EntityJob {
   if (value.version !== undefined && value.version !== 1) {
     throw jobError(`Unsupported job version ${String(value.version)}; expected 1.`);
   }
-  for (const key of ["copies", "edits", "erase"] as const) {
+  for (const key of ["copies", "edits", "hatches", "erase"] as const) {
     if (value[key] !== undefined && !Array.isArray(value[key])) {
       throw jobError(`Job '${key}' must be an array.`);
     }
@@ -129,6 +136,31 @@ export function validateJob(job: unknown): EntityJob {
     const hasRef = edit.ref !== undefined;
     if (hasHandle === hasRef) throw jobError(`edits[${index}] needs exactly one of handle or ref.`);
     if (hasRef) checkRef(edit.ref, `edits[${index}]`);
+  });
+
+  const checkHandleOrRef = (entry: unknown, where: string) => {
+    if (typeof entry === "string") {
+      if (!/^[0-9A-Fa-f]+$/.test(entry)) throw jobError(`${where} '${entry}' is not a hex handle.`);
+      return;
+    }
+    if (!entry || typeof entry !== "object") throw jobError(`${where} must be a handle or {ref}.`);
+    const value = entry as { ref?: unknown; handle?: unknown };
+    if (value.ref !== undefined) checkRef(value.ref, where);
+    else if (typeof value.handle !== "string") throw jobError(`${where} needs handle or ref.`);
+  };
+
+  (value.hatches ?? []).forEach((hatch, index) => {
+    const where = `hatches[${index}]`;
+    if (!hatch || typeof hatch !== "object" || Array.isArray(hatch)) throw jobError(`${where} must be an object.`);
+    const boundaries = hatch.boundaries;
+    const loops = hatch.loops;
+    if (boundaries !== undefined && !Array.isArray(boundaries)) throw jobError(`${where}.boundaries must be an array.`);
+    if (loops !== undefined && !Array.isArray(loops)) throw jobError(`${where}.loops must be an array.`);
+    if (!(Array.isArray(boundaries) && boundaries.length > 0) && !(Array.isArray(loops) && loops.length > 0)) {
+      throw jobError(`${where} needs boundaries and/or loops.`);
+    }
+    (boundaries as unknown[] | undefined ?? []).forEach((entry, b) => checkHandleOrRef(entry, `${where}.boundaries[${b}]`));
+    if (hatch.like !== undefined) checkHandleOrRef(hatch.like, `${where}.like`);
   });
 
   (value.erase ?? []).forEach((entry, index) => {
@@ -174,10 +206,12 @@ function upperKeys(map: unknown): Record<string, string> {
 
 export interface EntityJobResult extends JsonObject {
   status: "completed" | "failed";
-  stage: "copy" | "edit" | "erase" | "done";
+  stage: "copy" | "edit" | "hatch" | "erase" | "done";
   copies: Record<string, number>;
   copiedEntities: number;
   edited: number;
+  hatched: number;
+  hatchHandles: string[];
   erased: number;
   error?: string;
   handles?: HandleMaps;
@@ -185,7 +219,8 @@ export interface EntityJobResult extends JsonObject {
 
 /**
  * Runs a job against the plugin: one copyEntities call, then one editEntities
- * call with refs resolved to new handles, then one eraseEntities call. Each
+ * call with refs resolved to new handles, then one createHatches call, then
+ * one eraseEntities call. Each
  * stage is its own drawing transaction; if a later stage fails, the result
  * still carries the handle maps of what was already created.
  */
@@ -196,6 +231,8 @@ export async function runEntityJob(job: EntityJob, send: SendFn): Promise<Entity
     copies: {},
     copiedEntities: 0,
     edited: 0,
+    hatched: 0,
+    hatchHandles: [],
     erased: 0,
   };
   const maps: HandleMaps = {};
@@ -229,6 +266,25 @@ export async function runEntityJob(job: EntityJob, send: SendFn): Promise<Entity
     if (edits.length > 0) {
       const response = await send("editEntities", { edits }) as { edits?: unknown[] };
       result.edited = response?.edits?.length ?? edits.length;
+    }
+
+    result.stage = "hatch";
+    const resolveEntry = (entry: HandleOrRef, where: string): string => {
+      if (typeof entry === "string") return entry;
+      return typeof entry.ref === "string" ? resolveRef(entry.ref, maps, where) : String(entry.handle);
+    };
+    const hatches = (job.hatches ?? []).map((hatch, index) => {
+      const { boundaries, like, ...rest } = hatch as JsonObject & { boundaries?: HandleOrRef[]; like?: HandleOrRef };
+      return {
+        ...rest,
+        ...(boundaries ? { boundaries: boundaries.map((entry, b) => resolveEntry(entry, `hatches[${index}].boundaries[${b}]`)) } : {}),
+        ...(like !== undefined ? { like: resolveEntry(like, `hatches[${index}].like`) } : {}),
+      };
+    });
+    if (hatches.length > 0) {
+      const response = await send("createHatches", { hatches }) as { hatches?: Array<{ handle?: string }>; count?: number };
+      result.hatchHandles = (response?.hatches ?? []).map((entry) => String(entry.handle));
+      result.hatched = response?.count ?? result.hatchHandles.length;
     }
 
     result.stage = "erase";
