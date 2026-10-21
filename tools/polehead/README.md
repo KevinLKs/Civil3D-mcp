@@ -96,6 +96,9 @@ addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
 - Pole `calcs`: `[{"hdr": "%%UUNGUYED DE CALC (7733E)", "rows": [["left", "= right"], ...]}]`, drawn from the NOTE
   stash pieces, first box top at Cy - 100, each next 10 below. In combined
   calcs the line under each lettered load (`A. ...`, `B. ...`) is indented 9.923. `tlm.notes`: TLM NOTE box under the visible table.
+- Pole `riser`: riser detail under ELEV (docs/risers.md): `{"items": [{"c": "SEC", "deg": -10, "size": 3, "lead": 20}], "guards": [{"t": "unistrut", "deg": 70}]}`.
+  `deg` = riser position around the pole (0 = 3 o'clock, counterclockwise), `size` in inches (SEC 3, PRI 5 by default), `lead` optional
+  leader angle, `L` defaults to the first profile's, `drop` pushes the detail lower. 4" risers use a radius edit; U-GUARDs use arc center/angle edits.
 - Pole `rspans`: `[[from, to, ruling span, final sag]]` as written, RULING SPAN boxes (template example 3948B8 at
   1541.4998, -817.1629) centered on Cx under the calcs (Cy - 100 when there is no calc), each 10 below the last.
 - Guys attach at the row of the item with the exact same height first (DG @ 22'6" at the 22'6" COMM row).

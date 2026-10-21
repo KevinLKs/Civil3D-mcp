@@ -309,6 +309,80 @@ public static class EntityCommands
           changed.Add("closed");
         }
 
+        // Circles and arcs: center, radius, and for arcs the start/end angles
+        // (degrees CCW from +X, the arc runs CCW from start to end).
+        var center = ReadPoint(edit["center"]);
+        var radius = edit["radius"]?.GetValue<double>();
+        var startAngleDeg = edit["startAngleDeg"]?.GetValue<double>();
+        var endAngleDeg = edit["endAngleDeg"]?.GetValue<double>();
+        if (center != null || radius != null)
+        {
+          if (radius is { } rad && rad <= 0)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: radius must be greater than 0.");
+          }
+
+          switch (entity)
+          {
+            case Circle editedCircle:
+              if (center is { } cc)
+              {
+                editedCircle.Center = new Point3d(cc.X, cc.Y, editedCircle.Center.Z);
+              }
+
+              if (radius is { } cr)
+              {
+                editedCircle.Radius = cr;
+              }
+
+              break;
+            case Arc editedArc:
+              if (center is { } ac)
+              {
+                editedArc.Center = new Point3d(ac.X, ac.Y, editedArc.Center.Z);
+              }
+
+              if (radius is { } ar)
+              {
+                editedArc.Radius = ar;
+              }
+
+              break;
+            default:
+              throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: center/radius can only be set on circles and arcs.");
+          }
+
+          if (center != null)
+          {
+            changed.Add("center");
+          }
+
+          if (radius != null)
+          {
+            changed.Add("radius");
+          }
+        }
+
+        if (startAngleDeg != null || endAngleDeg != null)
+        {
+          if (entity is not Arc angledArc)
+          {
+            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index}: startAngleDeg/endAngleDeg can only be set on arcs.");
+          }
+
+          if (startAngleDeg is { } sa)
+          {
+            angledArc.StartAngle = NormalizeRadians(sa * Math.PI / 180.0);
+            changed.Add("startAngleDeg");
+          }
+
+          if (endAngleDeg is { } ea)
+          {
+            angledArc.EndAngle = NormalizeRadians(ea * Math.PI / 180.0);
+            changed.Add("endAngleDeg");
+          }
+        }
+
         // Rotation about the entity's own insertion point, in degrees CCW.
         var rotationDeg = edit["rotationDeg"]?.GetValue<double>();
         if (rotationDeg != null)
@@ -1530,6 +1604,13 @@ public static class EntityCommands
       Math.Min(minY.Value, maxY.Value),
       Math.Max(minX.Value, maxX.Value),
       Math.Max(minY.Value, maxY.Value));
+  }
+
+  private static double NormalizeRadians(double radians)
+  {
+    var full = 2.0 * Math.PI;
+    var value = radians % full;
+    return value < 0 ? value + full : value;
   }
 
   private static Point2d? ReadPoint(JsonNode? node)

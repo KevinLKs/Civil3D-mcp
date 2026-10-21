@@ -7,7 +7,7 @@ description: "Draft overhead pole head details in Civil 3D from a pole head PDF 
 
 Use when Kevin asks to draft a pole head detail, or a whole job of them, from a marked-up PDF into the AUD OH Template drawing open in Civil 3D. Everything is built in model space by COPYING template content and EDITING it; never draw equipment from scratch. Every job starts from a FRESH template copy (frames read `POLE#`); all pieces come from the Builder, example and stash areas, whose handles are the same in every copy. Kevin is the QC lead: run the QC checklist before reporting.
 
-Each pole gets its own sheet frame with the pole detail, pole name, CREW NOTE / NOTE boxes, GPS and ELEV blocks, and when the PDF has them a DE CALC box, a TLM block with its TLM NOTE box, and an obstruction detail. Everything sits at fixed offsets from the frame.
+Each pole gets its own sheet frame with the pole detail, pole name, CREW NOTE / NOTE boxes, GPS and ELEV blocks, and when the PDF has them a DE CALC box, a TLM block with its TLM NOTE box, and a riser and/or obstruction detail. Everything sits at fixed offsets from the frame.
 
 This file is the core. Topic rules live in the fork at `tools/polehead/docs/`. Read a reference file ONLY when its trigger fires:
 
@@ -17,7 +17,8 @@ This file is the core. Topic rules live in the fork at `tools/polehead/docs/`. R
 | Any down guy, span guy or anchor | `docs/guys-anchors.md` |
 | A calc table in CALCS | `docs/calcs-unguyed.md` |
 | TLM data (filled table, pasted snippet, TLM xlsx tab) | `docs/tlm.md` |
-| RISER/OBSTRUCTION DETAIL box not blank | `docs/obstruction.md` |
+| Risers (small circles) in the RISER/OBSTRUCTION DETAIL box | `docs/risers.md` |
+| A fence or other obstruction in that box | `docs/obstruction.md` |
 | Hand-building or hand-fixing a piece the generator does not place, or a qc.py failure you need the rule for | `docs/layout-rules.md`, `docs/template-pieces.md` |
 | A tool error, odd plugin behavior, a hand-built job with moves, mirrors or dims | `docs/plugin-quirks.md` |
 | Writing the spec | `tools/polehead/README.md` (spec format and item types) |
@@ -76,13 +77,13 @@ Crossarm with dots or pins = XARM + VERT P&I (a 3/C arm is usually `pins: [0, 1,
 ## Workflow
 
 0. Note the start time.
-1. Find the files. Survey all pages (details, TLM + CALCS strip, RISER/OBSTRUCTION box). List per pole: calcs, TLM, obstruction, guys. Fire the triggers.
+1. Find the files. Survey all pages (details, TLM + CALCS strip, RISER/OBSTRUCTION box). List per pole: calcs, TLM, risers, obstruction, guys. Fire the triggers.
 2. Per pole: every callout, true height, arrow direction, box side, pin slant, dot, red circle, slot, second profile; guys traced to anchors.
 3. Run `station_builder.py` for all poles; apply `docs/sheet-data.md`.
-4. Write the spec (README format); TLM over 10 addresses needs `tlm_extra` (tlm.md).
+4. Write the spec (README format); TLM over 10 addresses needs `tlm_extra` (tlm.md); risers go in the pole's `riser` (risers.md).
 5. `python polehead.py spec.json -o job_<TD>.json` (NOTE lines on stderr go to the report); commit, approve, apply once.
 6. Stage the result file. Verify query over the used frames (types TEXT, LWPOLYLINE, LEADER, DIMENSION, INSERT; includeGeometry true; one query per frame row so each saves to a file). Run `python qc.py spec.json job_<TD>.json job_<TD>.result.json <query files> --fix fix_<TD>.json`; commit, approve and apply the fix job plus anything else it reports. qc.py cannot check the spec against the PDF: check items 1, 6, 7, 8, 9, 10, 14 by eye. SOIL TYPE boxes go in the fix job by hand.
-7. Obstruction details: separate small job per `docs/obstruction.md`.
+7. Obstruction details: separate small job per `docs/obstruction.md`, south of any riser detail.
 8. Note the end time; final report per Autopilot.
 
 ## QC checklist (every pole)
@@ -103,4 +104,5 @@ Crossarm with dots or pins = XARM + VERT P&I (a 3/C arm is usually `pins: [0, 1,
 13. TLM per tlm.md.
 14. Every skip and over-20 TLM in the report; nothing inferred.
 15. Every pole has a frame (pole 9 and up in added frames, sheet number frame + 2).
-16. Obstruction details per obstruction.md.
+16. Riser details per risers.md (radius by size, edge touching the pole, `SEC`/`PRI`, no heights in riser callouts); obstruction details per obstruction.md, never overlapping.
+
