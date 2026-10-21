@@ -37,6 +37,8 @@ Read when hand-building or fixing something the generator does not place, or whe
 - Arrows over dead end pins: X COND 2E348D (insertion P + 2.5) and 2E3492 (P - 2.5) at row + 6.9648.
 - Side single arm groups: side pole 4787.4: 2E3493, 2E341F, 2E3420, 2E348C. Right box version (row -1396.63, side pole 4697.58): X COND 2E3492, 2E348D, SIDE XARM 2E3423, VERT P&I 2E3422. The X CONDs start at the pin top: insertion at the pin x (box right P + 2.5, left P - 2.5, centered P), y = row + 6.965.
 - Lone SIDE XARM: 2E3912, box pole to pole + 5, centered on its row.
+- INV OMNI CLOSED 2E344E (insertion 4580.5129, -1596.6283) leans LEFT (tick runs down-left from the circle); copy with `mirrorX` = its new insertion x for a right leaning one. Under xarm slots: insertion on the slot, on the arm line. Beside a dead end / single arm box: insertion 5 beyond that box's SIDE XARM insertion, on the row.
+- Street light: SL 2E38D1 (insertion 5177.3026, -1718.0507 on the pole line at its row) faces RIGHT, mirror about the pole for left; front facing SIDE SL 2E38CF at 5264.5156, -1718.0507. Callout `ST LT`, dim like any row.
 - HZ INV OMNI on a side box: box top on the row line, INV OMNI CLOSED 2E344E at box center height, 5 beyond the box center (example omni 4690.0843, box 4695.0843, both -1596.6283).
 - RCS CONTROL BOX: polyline 2E3432 (6.5467 x 8.746, left edge 4784.9005, center y -2011.4173). Mirroring is fine.
 - Guard arm line: LINE 2E3922 (35 long, from 4767.4005, -2151.7964), centered on the pole. Comm dots on it: SEC-MISC 2A500C (3805.6404, -388.2413) under line 2A500B (y -386.763).
