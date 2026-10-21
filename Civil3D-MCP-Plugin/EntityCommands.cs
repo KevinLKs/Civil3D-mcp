@@ -410,11 +410,11 @@ public static class EntityCommands
   // ----------------------------------------------------------------- hatch
 
   /// <summary>
-  /// Creates hatches from boundary entities (LWPOLYLINEs or circles, each one a
-  /// loop; open polylines are closed with a straight segment) and/or explicit
-  /// vertex loops. Pattern, scale, angle, style, layer and color can be copied
-  /// from an existing hatch ("like") and overridden per hatch. Hatches are
-  /// non-associative, so later edits to the boundaries do not move them.
+  /// Creates hatches like HATCH > Select objects: closed LWPOLYLINEs and circles
+  /// become the boundary objects (associative, so the hatch follows later edits).
+  /// Open polylines or explicit vertex loops fall back to vertex-built loops
+  /// (open ones closed with a straight segment, non-associative). Pattern, scale,
+  /// angle, style, layer and color can be copied from an existing hatch ("like").
   /// </summary>
   public static Task<object?> CreateHatchesAsync(JsonObject? parameters)
   {
@@ -433,10 +433,19 @@ public static class EntityCommands
           throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: must be an object.");
         }
 
+        // Like HATCH > Select objects: closed polylines and circles are used as
+        // the boundary objects themselves (associative, the hatch follows them).
+        // Only when a boundary is not a closed curve, or explicit loops are given,
+        // are loops built from vertices instead (non-associative).
         var loops = new List<(Point2dCollection Points, DoubleCollection Bulges)>();
+        var boundaryIds = new List<(ObjectId Id, string Handle)>();
+        var allClosed = true;
         foreach (var handle in ReadStringList(spec["boundaries"]))
         {
-          var boundary = transaction.GetObject(GetIdFromHandle(database, handle), OpenMode.ForRead);
+          var id = GetIdFromHandle(database, handle);
+          var boundary = transaction.GetObject(id, OpenMode.ForRead);
+          boundaryIds.Add((id, handle));
+          allClosed &= boundary is Circle || (boundary is Polyline closedPolyline && closedPolyline.Closed);
           loops.Add(LoopFromEntity(boundary, index, handle));
         }
 
@@ -463,6 +472,9 @@ public static class EntityCommands
           }
         }
 
+        var wantAssociative = PluginRuntime.GetOptionalBool(spec, "associative") ?? true;
+        var useObjects = wantAssociative && allClosed && boundaryIds.Count > 0 && spec["loops"] is not JsonArray;
+
         if (loops.Count == 0)
         {
           throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: needs boundaries and/or loops.");
@@ -477,59 +489,79 @@ public static class EntityCommands
         }
 
         var space = ResolveSpace(database, transaction, PluginRuntime.GetOptionalString(spec, "space"), OpenMode.ForWrite);
-        var hatch = new Hatch();
-        hatch.SetDatabaseDefaults(database);
-        space.Record.AppendEntity(hatch);
-        transaction.AddNewlyCreatedDBObject(hatch, true);
-
-        if (like != null)
-        {
-          hatch.Layer = like.Layer;
-          hatch.Color = like.Color;
-          hatch.LinetypeId = like.LinetypeId;
-          hatch.LineWeight = like.LineWeight;
-          hatch.HatchStyle = like.HatchStyle;
-        }
-
         var pattern = PluginRuntime.GetOptionalString(spec, "pattern") ?? like?.PatternName ?? "ANSI31";
         var patternType = like != null && pattern.Equals(like.PatternName, StringComparison.OrdinalIgnoreCase)
           ? like.PatternType
           : HatchPatternType.PreDefined;
         var angleDeg = PluginRuntime.GetOptionalDouble(spec, "angleDeg");
-        hatch.PatternAngle = angleDeg.HasValue ? angleDeg.Value * Math.PI / 180.0 : like?.PatternAngle ?? 0.0;
-        hatch.PatternScale = PluginRuntime.GetOptionalDouble(spec, "scale") ?? like?.PatternScale ?? 1.0;
-        if (hatch.PatternScale <= 0)
+        var angle = angleDeg.HasValue ? angleDeg.Value * Math.PI / 180.0 : like?.PatternAngle ?? 0.0;
+        var scale = PluginRuntime.GetOptionalDouble(spec, "scale") ?? like?.PatternScale ?? 1.0;
+        if (scale <= 0)
         {
           throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: scale must be positive.");
         }
 
-        Step(index, $"set pattern {pattern}", () => hatch.SetHatchPattern(patternType, pattern));
+        var colorIndex = PluginRuntime.GetOptionalInt(spec, "colorIndex");
+        if (colorIndex != null && (colorIndex < 0 || colorIndex > 256))
+        {
+          throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: colorIndex must be 0-256 (0 = ByBlock, 256 = ByLayer).");
+        }
+
+        // Canonical order: pattern first, then scale and angle (re-applying the
+        // pattern so they take effect), then loops, then evaluate, then the
+        // display properties. Every step reports its own failure.
+        var hatch = new Hatch();
+        hatch.SetDatabaseDefaults(database);
+        space.Record.AppendEntity(hatch);
+        transaction.AddNewlyCreatedDBObject(hatch, true);
+
+        Step(index, $"set pattern {patternType} {pattern}", () => hatch.SetHatchPattern(patternType, pattern));
+        Step(index, $"set scale {scale}", () => hatch.PatternScale = scale);
+        Step(index, $"set angle {angle}", () => hatch.PatternAngle = angle);
+        Step(index, "re-apply pattern", () => hatch.SetHatchPattern(hatch.PatternType, hatch.PatternName));
+        if (useObjects)
+        {
+          Step(index, "set associative", () => hatch.Associative = true);
+          foreach (var (id, handle) in boundaryIds)
+          {
+            Step(index, $"append boundary {handle}", () => hatch.AppendLoop(HatchLoopTypes.Default, new ObjectIdCollection(new[] { id })));
+          }
+        }
+        else
+        {
+          Step(index, "set non-associative", () => hatch.Associative = false);
+          for (var l = 0; l < loops.Count; l++)
+          {
+            var (points, bulges) = loops[l];
+            AppendPolylineLoop(hatch, points, bulges, index, l);
+          }
+        }
+
+        Step(index, "evaluate hatch", () => hatch.EvaluateHatch(true));
+
+        if (like != null)
+        {
+          Step(index, "copy layer", () => hatch.Layer = like.Layer);
+          Step(index, "copy color", () => hatch.Color = like.Color);
+          Step(index, "copy linetype", () => hatch.LinetypeId = like.LinetypeId);
+          Step(index, "copy lineweight", () => hatch.LineWeight = like.LineWeight);
+          if (hatch.HatchStyle != like.HatchStyle)
+          {
+            Step(index, "copy hatch style", () => hatch.HatchStyle = like.HatchStyle);
+            Step(index, "re-evaluate hatch", () => hatch.EvaluateHatch(true));
+          }
+        }
 
         var layer = PluginRuntime.GetOptionalString(spec, "layer");
         if (!string.IsNullOrWhiteSpace(layer))
         {
-          hatch.Layer = layer;
+          Step(index, $"set layer {layer}", () => hatch.Layer = layer);
         }
 
-        var colorIndex = PluginRuntime.GetOptionalInt(spec, "colorIndex");
         if (colorIndex != null)
         {
-          if (colorIndex < 0 || colorIndex > 256)
-          {
-            throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: colorIndex must be 0-256 (0 = ByBlock, 256 = ByLayer).");
-          }
-
           hatch.ColorIndex = colorIndex.Value;
         }
-
-        hatch.Associative = false;
-        for (var l = 0; l < loops.Count; l++)
-        {
-          var (points, bulges) = loops[l];
-          AppendPolylineLoop(hatch, points, bulges, index, l);
-        }
-
-        Step(index, "evaluate hatch", () => hatch.EvaluateHatch(true));
         created.Add(new Dictionary<string, object?>
         {
           ["index"] = index,
@@ -538,6 +570,7 @@ public static class EntityCommands
           ["scale"] = R(hatch.PatternScale),
           ["angleDeg"] = R(hatch.PatternAngle * 180.0 / Math.PI),
           ["loops"] = loops.Count,
+          ["associative"] = hatch.Associative,
           ["layer"] = hatch.Layer,
         });
       }
@@ -586,6 +619,10 @@ public static class EntityCommands
     catch (Autodesk.AutoCAD.Runtime.Exception ex)
     {
       throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: {what} failed: {ex.ErrorStatus}.");
+    }
+    catch (System.Exception ex) when (ex is not JsonRpcDispatchException)
+    {
+      throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: {what} failed: {ex.GetType().Name}: {ex.Message}");
     }
   }
 
