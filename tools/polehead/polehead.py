@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import copy as _copy
 import json
+import math
 import re
 import sys
 
@@ -186,6 +187,7 @@ class Job:
         self.ctx = {}          # what is being drawn now (pole, part, ...); stored per copy for qc.py
         self.meta = {}         # op key -> ctx at copy time
         self.keymap = {}       # op key -> group index, set by to_apply_job
+        self.hatches = []      # riser guards: {boundaries: [('ref', key, handle)], like: handle}
 
     def tag(self, **kw):
         self.ctx = dict(self.ctx, **kw)
@@ -226,7 +228,11 @@ class Job:
             x = dict(handle=handle) if key is None else dict(ref='g%d:%s' % (keymap[key], handle))
             x.update(e)
             edits.append(x)
-        return dict(version=1, copies=copies, edits=edits, erase=[])
+        job = dict(version=1, copies=copies, edits=edits, erase=[])
+        if self.hatches:
+            job['hatches'] = [dict(boundaries=[dict(ref='g%d:%s' % (keymap[k], h)) for _, k, h in x['boundaries']], like=x['like'])
+                              for x in self.hatches]
+        return job
 
 
 # ------------------------------------------------------------------ pole detail
@@ -665,6 +671,10 @@ def build_sheet(J, Cx, Cy, sheet):
     ey = gy - 5 - ELEV[2]
     elev = str(sheet.get('elev', '')).upper().replace("'", '').replace('FT', '').strip()
     J.cp([ELEV[0]], L - STASH_X, ey - ELEV[1], edit=[dict(attributes={'FOOTAGE': elev})])
+    if sheet.get('riser'):
+        J.tag(part='riser')
+        build_riser(J, L, ey, sheet)
+        J.tag(part='sheet')
     tlm = sheet.get('tlm')
     if tlm:
         addr = [[street_only(a), m] for a, m in tlm.get('addr', [])]
@@ -707,6 +717,108 @@ def build_sheet(J, Cx, Cy, sheet):
     for n, rs in enumerate(sheet.get('rspans') or []):            # RULING SPAN boxes under the calcs
         J.tag(part='rspan', box=n)
         top = build_rspan(J, Cx, top, rs) - 10
+
+
+# ------------------------------------------------------------------ riser detail (docs/risers.md)
+RISER_POLE = (2157.6227, -872.5787)          # template riser example "A" pole circle center
+RISER_BASE = ['39253F', '39253D', '39253E', '392540', '392541']   # pole circle r 12.604, ticks 2.75 (top, left, bottom, right)
+RISER_NAME = (('39256C', 2150.4342), ('39256D', 2150.5313))   # top / bottom, UTIL 4.8, left justified, about 3.594 per character
+RISER_PROPOSED = '392548'                    # STA-TEXT, centered under the pole as in the template
+RISER_LX = ('392547', 2152.4742)              # L/xx, UTIL 4.8, left justified, about 3.4324 per character
+RISER_R = {1: 1.95, 2: 2.925, 3: 3.315, 4: 3.6075, 5: 3.9}
+RISER_CIRCLE = {1: ('392544', 2143.4724, -875.7406), 2: ('392543', 2148.7997, -885.3881),
+                3: ('3925C4', 2145.5635, -862.1855), 5: ('392550', 2331.1182, -860.7672)}
+RISER_KIND_SIZE = {'SEC': 3, 'PRI': 5}       # risers called only by conduit type
+RISER_LEADER = '392542'
+RISER_TEXT = ('39269A', 2117.5897, -854.1364)   # TEXT layer, Standard 4.8, RIGHT justified at its right edge
+UGUARD = ('3926EA', 2342.6413, -872.5787, 50.18)   # ARC r 1.95 on the pole edge, template angle (deg)
+UNISTRUT = ('39257A', '392579', 2153.0721, -989.5914)   # open LWPOLYLINE + SOLID hatch; template pole center
+KICKBLOCK = (['392566', '392567', '392568', '392569'], 2343.3995, -975.1775)
+
+
+def riser_split(name):
+    n = len(name)
+    a = {8: 4, 7: 4, 6: 3, 9: 5}.get(n, (n + 1) // 2)
+    return name[:a], name[a:]
+
+
+def _rot(x, y, cx, cy, d):
+    t = math.radians(d)
+    c, s = math.cos(t), math.sin(t)
+    return cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c
+
+
+def build_riser(J, notes_left, elev_bottom, sheet):
+    """Riser detail in the obstruction area: pole circle, ticks, name, PROPOSED, L/xx, risers with leaders."""
+    rz = sheet['riser']
+    Px = notes_left + 51.0456 - 0.0995
+    Py = elev_bottom - 151.0456 + 0.7145 - rz.get('drop', 0)
+    dx, dy = Px - RISER_POLE[0], Py - RISER_POLE[1]
+    J.cp(RISER_BASE, dx, dy)
+    top, bot = riser_split(sheet['pole'])
+    for txt, (h, x0) in zip((top, bot), RISER_NAME):
+        J.cp([h], (Px - len(txt) * 3.594 / 2) - x0, dy, edit=[dict(text=txt)])
+    J.cp([RISER_PROPOSED], dx, dy)
+    lx = rz.get('L') or sheet['profiles'][0].get('L', 'L/N')
+    lx = lx.replace(' ', '').upper()
+    J.cp([RISER_LX[0]], (Px - len(lx) * 3.4324 / 2) - RISER_LX[1], dy, edit=[dict(text=lx)])
+    for it in rz.get('items', []):
+        lab = it['c'].upper()
+        size = it.get('size') or RISER_KIND_SIZE.get(lab.split()[-1], 3)
+        r = RISER_R[size]
+        if size not in RISER_CIRCLE:
+            J.report.append('%s: %d" riser drawn with the 5" circle (no %d" template circle; radius edit not supported)' % (sheet['pole'], size, size))
+        h, cx0, cy0 = RISER_CIRCLE.get(size, RISER_CIRCLE[5])
+        t = math.radians(it['deg'])
+        rc = (Px + (12.604 + r) * math.cos(t), Py + (12.604 + r) * math.sin(t))
+        J.cp([h], rc[0] - cx0, rc[1] - cy0)
+        right = math.cos(t) >= 0
+        if 'lead' in it:
+            ph = it['lead']
+        else:
+            a = it['deg'] if right else 180 - it['deg']
+            a = (a + 180) % 360 - 180
+            p = 20 if a >= -20 else -25
+            ph = p if right else 180 - p
+        p = math.radians(ph)
+        el = (rc[0] + 18 * math.cos(p), rc[1] + 18 * math.sin(p))
+        right = el[0] > rc[0]
+        m = math.hypot(el[0] - rc[0], el[1] - rc[1])
+        ar = (rc[0] + r * (el[0] - rc[0]) / m, rc[1] + r * (el[1] - rc[1]) / m)
+        end = (el[0] + (4.29 if right else -4.29), el[1])
+        J.cp([RISER_LEADER], 0, 0, edit=[dict(vertices=[pt(*ar), pt(*el), pt(*end)])])
+        # right justified text: right edge 2.8 short of the leader end; on the right mirror across x = end
+        J.cp([RISER_TEXT[0]], (end[0] - 2.8) - RISER_TEXT[1], (end[1] - 3.0) - RISER_TEXT[2],
+             mirror=end[0] if right else None, edit=[dict(text=lab)])
+    for g in rz.get('guards', []):
+        t, d = g['t'].lower(), g['deg']
+        if t == 'uguard':
+            # ARC cannot be rotated by the plugin: template angle (about 50 deg) or its mirror (about 130 deg)
+            h, cx, cy, a0 = UGUARD
+            mir = math.cos(math.radians(d)) < 0
+            if abs(((d if not mir else 180 - d) - a0 + 180) % 360 - 180) > 15:
+                J.report.append('%s: U-GUARD at %s deg drawn at %s deg (arc rotation not supported)' % (sheet['pole'], d, 180 - a0 if mir else a0))
+            J.cp([h], Px - cx, Py - cy, mirror=Px if mir else None)
+        elif t == 'unistrut':
+            h, hh, cx, cy = UNISTRUT
+            src = [(2144.4665, -970.7538), (2143.7257, -972.7972), (2171.191, -982.7534), (2171.9318, -980.7099)]
+            k = J.cp([h], 0, 0)
+            rot = d - 69.66
+            vs = [_rot(x - cx + Px, y - cy + Py, Px, Py, rot) for x, y in src]
+            J.edits.append((k, h, dict(vertices=[pt(*v) for v in vs], closed=True)))
+            J.hatches.append(dict(boundaries=[('ref', k, h)], like=hh))
+        elif t == 'kickblock':
+            hs, cx, cy = KICKBLOCK
+            src = {'392566': ((2358.0066, -993.7075), (2328.7924, -993.7075)), '392567': ((2328.7924, -987.9112), (2358.0066, -987.9112)),
+                   '392568': ((2358.0066, -987.9112), (2358.0066, -993.7075)), '392569': ((2328.7924, -993.7075), (2328.7924, -987.9112))}
+            rot = d + 90
+            eds = []
+            for h in hs:
+                a, b = [_rot(x - cx + Px, y - cy + Py, Px, Py, rot) for x, y in src[h]]
+                eds.append(dict(start=pt(*a), end=pt(*b)))
+            J.cp(hs, 0, 0, edit=eds)
+        else:
+            J.report.append('%s: riser guard %r not taught' % (sheet['pole'], g['t']))
 
 
 def build_rspan(J, Cx, top, rs):

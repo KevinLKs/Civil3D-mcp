@@ -211,3 +211,22 @@ class AnchorIndexTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestRiser(unittest.TestCase):
+    def test_riser_touches_pole_and_text_side(self):
+        import math
+        sheet = dict(pole='1879680E', profiles=[dict(L='L/N')], notes=['-X'],
+                     riser=dict(items=[dict(c='SEC', deg=195), dict(c='PRI', deg=-70)]))
+        J = ph.Job()
+        ph.build_riser(J, 1326.117, -3086.0311, sheet)
+        Px, Py = 1326.117 + 50.9461, -3086.0311 - 150.3311
+        circles = [op for _, op in J.ops if op['handles'] in (['3925C4'], ['392550'])]
+        for op, r, (h, cx, cy) in zip(circles, (3.315, 3.9), (ph.RISER_CIRCLE[3], ph.RISER_CIRCLE[5])):
+            x, y = cx + op['dx'], cy + op['dy']
+            self.assertAlmostEqual(math.hypot(x - Px, y - Py), 12.604 + r, places=3)
+        texts = [op for _, op in J.ops if op['handles'] == ['39269A']]
+        self.assertNotIn('mirrorX', texts[0])      # left side riser: right justified, no mirror
+        self.assertIn('mirrorX', texts[1])         # right side: mirrored to left justified
+        names = [e['text'] for _, h, e in J.edits if h in ('39256C', '39256D')]
+        self.assertEqual(names, ['1879', '680E'])
