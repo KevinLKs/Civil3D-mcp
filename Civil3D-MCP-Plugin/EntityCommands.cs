@@ -410,11 +410,11 @@ public static class EntityCommands
   // ----------------------------------------------------------------- hatch
 
   /// <summary>
-  /// Creates hatches from boundary entities (LWPOLYLINEs or circles, each one a
-  /// loop; open polylines are closed with a straight segment) and/or explicit
-  /// vertex loops. Pattern, scale, angle, style, layer and color can be copied
-  /// from an existing hatch ("like") and overridden per hatch. Hatches are
-  /// non-associative, so later edits to the boundaries do not move them.
+  /// Creates hatches like HATCH > Select objects: closed LWPOLYLINEs and circles
+  /// become the boundary objects (associative, so the hatch follows later edits).
+  /// Open polylines or explicit vertex loops fall back to vertex-built loops
+  /// (open ones closed with a straight segment, non-associative). Pattern, scale,
+  /// angle, style, layer and color can be copied from an existing hatch ("like").
   /// </summary>
   public static Task<object?> CreateHatchesAsync(JsonObject? parameters)
   {
@@ -433,10 +433,19 @@ public static class EntityCommands
           throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: must be an object.");
         }
 
+        // Like HATCH > Select objects: closed polylines and circles are used as
+        // the boundary objects themselves (associative, the hatch follows them).
+        // Only when a boundary is not a closed curve, or explicit loops are given,
+        // are loops built from vertices instead (non-associative).
         var loops = new List<(Point2dCollection Points, DoubleCollection Bulges)>();
+        var boundaryIds = new List<(ObjectId Id, string Handle)>();
+        var allClosed = true;
         foreach (var handle in ReadStringList(spec["boundaries"]))
         {
-          var boundary = transaction.GetObject(GetIdFromHandle(database, handle), OpenMode.ForRead);
+          var id = GetIdFromHandle(database, handle);
+          var boundary = transaction.GetObject(id, OpenMode.ForRead);
+          boundaryIds.Add((id, handle));
+          allClosed &= boundary is Circle || (boundary is Polyline closedPolyline && closedPolyline.Closed);
           loops.Add(LoopFromEntity(boundary, index, handle));
         }
 
@@ -462,6 +471,9 @@ public static class EntityCommands
             loops.Add(CloseLoop(points, points.Select(_ => 0.0).ToList(), true));
           }
         }
+
+        var wantAssociative = PluginRuntime.GetOptionalBool(spec, "associative") ?? true;
+        var useObjects = wantAssociative && allClosed && boundaryIds.Count > 0 && spec["loops"] is not JsonArray;
 
         if (loops.Count == 0)
         {
@@ -507,12 +519,22 @@ public static class EntityCommands
         Step(index, $"set scale {scale}", () => hatch.PatternScale = scale);
         Step(index, $"set angle {angle}", () => hatch.PatternAngle = angle);
         Step(index, "re-apply pattern", () => hatch.SetHatchPattern(hatch.PatternType, hatch.PatternName));
-        Step(index, "set non-associative", () => hatch.Associative = false);
-
-        for (var l = 0; l < loops.Count; l++)
+        if (useObjects)
         {
-          var (points, bulges) = loops[l];
-          AppendPolylineLoop(hatch, points, bulges, index, l);
+          Step(index, "set associative", () => hatch.Associative = true);
+          foreach (var (id, handle) in boundaryIds)
+          {
+            Step(index, $"append boundary {handle}", () => hatch.AppendLoop(HatchLoopTypes.Default, new ObjectIdCollection(new[] { id })));
+          }
+        }
+        else
+        {
+          Step(index, "set non-associative", () => hatch.Associative = false);
+          for (var l = 0; l < loops.Count; l++)
+          {
+            var (points, bulges) = loops[l];
+            AppendPolylineLoop(hatch, points, bulges, index, l);
+          }
         }
 
         Step(index, "evaluate hatch", () => hatch.EvaluateHatch(true));
@@ -548,6 +570,7 @@ public static class EntityCommands
           ["scale"] = R(hatch.PatternScale),
           ["angleDeg"] = R(hatch.PatternAngle * 180.0 / Math.PI),
           ["loops"] = loops.Count,
+          ["associative"] = hatch.Associative,
           ["layer"] = hatch.Layer,
         });
       }

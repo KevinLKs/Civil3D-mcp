@@ -49,7 +49,8 @@ const EditSchema = z.object({
 });
 
 const HatchSchema = z.object({
-  boundaries: z.array(HandleSchema).optional().describe("Boundary entities, one loop each: LWPOLYLINEs (open ones are closed with a straight segment) or circles."),
+  boundaries: z.array(HandleSchema).optional().describe("Boundary objects, like HATCH > Select objects: closed LWPOLYLINEs or circles (associative). Open polylines fall back to vertex loops closed with a straight segment."),
+  associative: z.boolean().optional().describe("Default true: closed boundaries are used as objects and the hatch follows them. false always builds vertex loops."),
   loops: z.array(z.array(Point2DSchema).min(3)).optional().describe("Extra loops as vertex lists (straight segments, closed automatically)."),
   like: HandleSchema.optional().describe("Existing hatch to copy pattern, scale, angle, style, layer and color from."),
   pattern: z.string().optional().describe("Pattern name, e.g. ANSI31 (default: like's pattern, else ANSI31)."),
@@ -190,7 +191,7 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
         "copy: batch copy or move entities by handles and/or window with a dx/dy offset and optional mirror; returns old-to-new handle maps. " +
         "edit: batch change text, attribute values, vertices/endpoints, dimension points, color, linetype or layer by handle. " +
         "erase: delete entities by handle. " +
-        "hatch: create non-associative hatches from boundary polylines/circles or vertex loops, matching an existing hatch's pattern, scale and angle via 'like'. " +
+        "hatch: create hatches like HATCH > Select objects (closed polylines/circles, associative) or from vertex loops, matching an existing hatch's pattern, scale and angle via 'like'. " +
         "apply: run a whole job (copies, then edits, hatches and erases that may reference the new copies as \"<copyId>:<sourceHandle>\") from a JSON file in one call; " +
         "approval binds to the file hash, so the request stays tiny. Batch copy and edit work so one approval covers a whole detail.",
       inputShape: {
