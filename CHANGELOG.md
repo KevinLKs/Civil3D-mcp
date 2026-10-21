@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `civil3d_entity` action `edit` (and `apply` job edits): circles and arcs take
+  `center` and `radius`; arcs also take `startAngleDeg` / `endAngleDeg`.
+- `tools/polehead`: riser details (`riser` spec), 4" risers by radius edit,
+  U-GUARDs at any angle by arc edits.
 - `civil3d_entity` action `apply`: runs a copy/edit/erase job from a JSON file
   (or an inline `job`). Edits and erases can reference the job's own copies as
   `"<copyId>:<sourceHandle>"`, so a whole batch runs in one call. The handle map

@@ -43,6 +43,10 @@ const EditSchema = z.object({
   textPosition: Point2DSchema.optional().describe("Dimension text location (middle of the text). Applied after dimension points."),
   vertices: z.array(Point2DSchema).min(2).optional().describe("Replace all vertices of a line, polyline or leader."),
   closed: z.boolean().optional().describe("LWPOLYLINE: close or open it (closed boundaries are required for hatching)."),
+  center: Point2DSchema.optional().describe("CIRCLE or ARC: new center point."),
+  radius: z.number().positive().optional().describe("CIRCLE or ARC: new radius."),
+  startAngleDeg: z.number().optional().describe("ARC: start angle in degrees CCW from +X (the arc runs CCW from start to end)."),
+  endAngleDeg: z.number().optional().describe("ARC: end angle in degrees CCW from +X."),
   colorIndex: z.number().int().min(0).max(256).optional().describe("ACI color: 0 = ByBlock, 256 = ByLayer."),
   linetype: z.string().optional().describe("Linetype name; must already be loaded in the drawing."),
   layer: z.string().optional(),
@@ -189,7 +193,7 @@ export const ENTITY_DOMAIN_DEFINITION: DomainToolDefinition = {
         "Reads, copies, moves, edits and erases ordinary AutoCAD entities (blocks, lines, polylines, text, MText, multileaders, attributes) in model space or a layout. " +
         "query: list entities in a window with handles, block names, attribute values, text and geometry. " +
         "copy: batch copy or move entities by handles and/or window with a dx/dy offset and optional mirror; returns old-to-new handle maps. " +
-        "edit: batch change text, attribute values, vertices/endpoints, dimension points, color, linetype or layer by handle. " +
+        "edit: batch change text, attribute values, vertices/endpoints, circle/arc center, radius and arc angles, dimension points, color, linetype or layer by handle. " +
         "erase: delete entities by handle. " +
         "hatch: create hatches like HATCH > Select objects (closed polylines/circles, associative) or from vertex loops, matching an existing hatch's pattern, scale and angle via 'like'. " +
         "apply: run a whole job (copies, then edits, hatches and erases that may reference the new copies as \"<copyId>:<sourceHandle>\") from a JSON file in one call; " +

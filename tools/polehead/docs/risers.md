@@ -15,7 +15,7 @@ Read when the RISER/OBSTRUCTION DETAIL box on a PDF page shows risers (small cir
 | 1" | 1.95 | 392544 |
 | 2" | 2.925 | 392543 |
 | 3" | 3.315 | 3925C4 |
-| 4" | 3.6075 (between 3" and 5") | none: the plugin cannot set a radius, so it draws the 5" circle and reports it |
+| 4" | 3.6075 (between 3" and 5") | none: copy 3925C4 and edit `radius` |
 | 5" | 3.9 | 392550 |
 
 - Riser called only by its conduit type: `SEC RISER` = 3", `PRIMARY RISER` = 5".
@@ -35,7 +35,7 @@ Read when the RISER/OBSTRUCTION DETAIL box on a PDF page shows risers (small cir
 
 ## Guards on a riser
 
-- U-GUARD: ARC 3926EA (r 1.95, centered on the pole circle edge, opening toward the pole) at about 50 deg on template pole B (2342.6413, -872.5787). The plugin cannot rotate an arc: it is drawn at 50 deg, or mirrored to 130 deg, and any other angle is reported for a hand fix.
+- U-GUARD: ARC 3926EA (r 1.95, centered on the pole circle edge, opening toward the pole) at about 50 deg on template pole B (2342.6413, -872.5787). Placed at any angle by editing the copy: `center` = pole center + 12.456 at `deg`, `startAngleDeg` = deg - 90.1, `endAngleDeg` = deg + 90.1 (the arc runs counterclockwise from start to end).
 - UNISTRUT: open LWPOLYLINE 39257A with a SOLID hatch 392579 (template pole 2153.0721, -989.5914, drawn at about 70 deg). The generator rotates the vertices to `deg`, closes the polyline and hatches it like 392579.
 - KICKBLOCK: four LINEs 392566 to 392569 (template pole 2343.3995, -975.1775, below the pole at -90 deg), rotated to `deg`. Never seen on a job yet.
 - Guard callouts are not taught yet: draft the symbol and note it.
@@ -43,7 +43,7 @@ Read when the RISER/OBSTRUCTION DETAIL box on a PDF page shows risers (small cir
 ## Placement
 
 - Same spot as an obstruction detail: pole center (notes left + 50.9461, ELEV bottom - 150.3311). The ELEV insertion y is its bottom.
-- A sheet with both a riser detail and a separate obstruction detail: riser detail first, the obstruction detail further south (set its easement circle top 100 below the lowest riser detail text), and keep stacking south so nothing overlaps. `drop` in the riser spec pushes the riser detail down when it has to go below something else.
+- A sheet with both a riser detail and a separate obstruction detail: riser detail first, then each next detail 100 below the lowest text of the one above (for an obstruction detail, its easement circle top), and keep stacking south so nothing overlaps. `drop` in the riser spec pushes the riser detail down when it has to go below something else.
 
 ## Spec
 

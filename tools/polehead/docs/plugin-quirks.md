@@ -19,3 +19,5 @@ Read when something misbehaves, before a hand-built job with moves, mirrors or d
 - Plugin log for unexplained errors: C:\Users\ksims\AppData\Local\Civil3DMcpPlugin\plugin.log (request folder access, stage it, tail it).
 - After a plugin rebuild Kevin saves (QSAVE), closes Civil 3D and Claude Desktop, git pull, npm run build, dotnet build, reopens. TRUSTEDPATHS `C:\civ3dmcp\...`. The connection drops during the restart.
 - Stale dim graphics: ask Kevin to REGEN.
+
+- Circles and arcs: `edit` takes `center`, `radius`, and on arcs `startAngleDeg` / `endAngleDeg` (degrees CCW from +X; the arc runs CCW from start to end). Needs the plugin build with this change (PR #23); an older build rejects or ignores these fields, so redeploy the plugin before a job that uses them.

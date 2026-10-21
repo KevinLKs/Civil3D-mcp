@@ -725,7 +725,7 @@ RISER_BASE = ['39253F', '39253D', '39253E', '392540', '392541']   # pole circle 
 RISER_NAME = (('39256C', 2150.4342), ('39256D', 2150.5313))   # top / bottom, UTIL 4.8, left justified, about 3.594 per character
 RISER_PROPOSED = '392548'                    # STA-TEXT, centered under the pole as in the template
 RISER_LX = ('392547', 2152.4742)              # L/xx, UTIL 4.8, left justified, about 3.4324 per character
-RISER_R = {1: 1.95, 2: 2.925, 3: 3.315, 4: 3.6075, 5: 3.9}
+RISER_R = {1: 1.95, 2: 2.925, 3: 3.315, 4: 3.6075, 5: 3.9}   # 4": no template circle, 3" copy + radius edit
 RISER_CIRCLE = {1: ('392544', 2143.4724, -875.7406), 2: ('392543', 2148.7997, -885.3881),
                 3: ('3925C4', 2145.5635, -862.1855), 5: ('392550', 2331.1182, -860.7672)}
 RISER_KIND_SIZE = {'SEC': 3, 'PRI': 5}       # risers called only by conduit type
@@ -766,12 +766,11 @@ def build_riser(J, notes_left, elev_bottom, sheet):
         lab = it['c'].upper()
         size = it.get('size') or RISER_KIND_SIZE.get(lab.split()[-1], 3)
         r = RISER_R[size]
-        if size not in RISER_CIRCLE:
-            J.report.append('%s: %d" riser drawn with the 5" circle (no %d" template circle; radius edit not supported)' % (sheet['pole'], size, size))
-        h, cx0, cy0 = RISER_CIRCLE.get(size, RISER_CIRCLE[5])
+        # no template circle for this size (4"): copy the 3" circle and edit its radius
+        h, cx0, cy0 = RISER_CIRCLE.get(size, RISER_CIRCLE[3])
         t = math.radians(it['deg'])
         rc = (Px + (12.604 + r) * math.cos(t), Py + (12.604 + r) * math.sin(t))
-        J.cp([h], rc[0] - cx0, rc[1] - cy0)
+        J.cp([h], rc[0] - cx0, rc[1] - cy0, edit=[None if size in RISER_CIRCLE else dict(radius=r)])
         right = math.cos(t) >= 0
         if 'lead' in it:
             ph = it['lead']
@@ -793,12 +792,11 @@ def build_riser(J, notes_left, elev_bottom, sheet):
     for g in rz.get('guards', []):
         t, d = g['t'].lower(), g['deg']
         if t == 'uguard':
-            # ARC cannot be rotated by the plugin: template angle (about 50 deg) or its mirror (about 130 deg)
+            # ARC r 1.95 centered on the pole circle edge at d, open toward the pole (runs d - 90.1 to d + 90.1 CCW)
             h, cx, cy, a0 = UGUARD
-            mir = math.cos(math.radians(d)) < 0
-            if abs(((d if not mir else 180 - d) - a0 + 180) % 360 - 180) > 15:
-                J.report.append('%s: U-GUARD at %s deg drawn at %s deg (arc rotation not supported)' % (sheet['pole'], d, 180 - a0 if mir else a0))
-            J.cp([h], Px - cx, Py - cy, mirror=Px if mir else None)
+            t = math.radians(d)
+            J.cp([h], Px - cx, Py - cy, edit=[dict(center=pt(Px + 12.456 * math.cos(t), Py + 12.456 * math.sin(t)),
+                                                    startAngleDeg=r4((d - 90.1) % 360), endAngleDeg=r4((d + 90.1) % 360))])
         elif t == 'unistrut':
             h, hh, cx, cy = UNISTRUT
             src = [(2144.4665, -970.7538), (2143.7257, -972.7972), (2171.191, -982.7534), (2171.9318, -980.7099)]

@@ -1,6 +1,6 @@
 # Riser and obstruction details
 
-Read when the RISER/OBSTRUCTION DETAIL box at the top left of a PDF page shows a fence or other obstruction. Risers are risers.md. Only fence obstructions are taught; walls, trees and structures: skip and note. When the sheet also has a riser detail, this detail goes south of it (easement circle top 100 below the riser detail's lowest text). The generator does not place these yet: build a small apply job after the main apply (query that frame's ELEV insert for its position).
+Read when the RISER/OBSTRUCTION DETAIL box at the top left of a PDF page shows a fence or other obstruction. Risers are risers.md. Only fence obstructions are taught; walls, trees and structures: skip and note. When the sheet also has a riser detail, this detail goes south of it (easement circle top 100 below the riser detail's lowest text); every further detail 100 below the one above. The generator does not place these yet: build a small apply job after the main apply (query that frame's ELEV insert for its position).
 
 ## Template sample OBSTRUCTION DETAIL "A" (easement circle center 2248.5841, -1320.2260)
 
