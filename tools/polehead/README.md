@@ -55,11 +55,11 @@ for `qc.py` (see below).
   - `xr`, `xl`, `xb` X COND right, left, both. COMM and CATV lines are always X CONDs; add `dot: true` to keep the SEC-MISC dot under them.
   - `dot` SEC-MISC dot alone (a bare dot with no line).
   - `sg` span guy half, `k` `R` or `L` (never mirrored or edited). `share: 1` puts it on the row of the other item at that whole foot.
-  - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm (outer CUTOUTs, inner SAs; `ends: "sa"` puts the SAs at the arm ends and the CUTOUTs inner). `arm2fl` 2/C arm with FH and LA.
+  - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm (outer CUTOUTs, inner SAs; `ends: "sa"` puts the SAs outboard at -/+24.46 (symmetric, never mirrored), and the CUTOUTs inboard at -19.51 / +19.59, never mirrored; give the arm's pins on the same item with `pins`, `circ` and `slant`, never as a second `arm` item, which doubles the XARM). `arm2fl` 2/C arm with FH and LA.
   - `end: "R"` / `"L"` on any crossarm: the pole sits at the arm's right / left end (offset arm), not its center.
   - `arm` crossarm with any mix: `dots` puts SEC-MISC dots on the arm at those slots (comm/CATV seen end on); `pins` and `circ` are slot indexes 0 to 3, left to right (-29.76, -12.13, +12.13, +29.76).
   - `slant: {"<slot>": "L" | "R"}` on `arm`, `arm2` or `arm4`: that slot's pin is drawn slanted (leaning left 2E3477
-    or right 2E3472, already rotated in the template) with its base on the slot, 0.2 above the arm line. The upright pin
+    or right 2E3472, already rotated in the template) with its base on the slot, on the arm line. The upright pin
     of that slot is left out, so nothing has to be erased. Example: `"slant": {"3": "R"}`.
   - `de1` side view dead end one way (`k: "L"` points left), `de2` both ways. `nopins: true` leaves the pins off;
     `fhla: "L"` / `"R"` puts the SA and CUTOUT on the dead end boxes (`"R"` = cutout left, SA right).
@@ -67,6 +67,15 @@ for `qc.py` (see below).
     middle of its wall on the dim point). With `omni` the box hangs just below the row line and the omni sits at the box center.
   - Pins drawn with a circle at their base (4/C arms on Builder pages): use `arm` with `pins` AND `circ` (e.g. `[0,1,2,3]` both).
   - `omni: true` with `box`: INV OMNI CLOSED with its insertion 5 beside the SIDE XARM insertion, on the box's side (HZ INV OMNI SW).
+  - `stlt` street light (ST LT): `k: "C"` front facing SIDE SL (2E38CF) on the pole at its row; `k: "R"` side SL
+    (2E38D1) arm out to the right, `k: "L"` mirrored.
+  - `pinx` on `arm`: pins at any offsets from the pole, e.g. a 3/C secondary drawn with all three pins right of the
+    pole: `"pinx": [9.755, 19.755, 29.755]`. Draw pins where the PDF draws them; never move them to the standard slots.
+  - `box` on `xr`/`xl`/`xb` (centered on the row): the X COND on the box's side starts at the box's outer edge
+    (pole + 5), not at the pole, e.g. COMM ARM, COMM SVC drawn as a box with an arrow out of it.
+  - `dot: true` on `pri`: the SEC-MISC dot hangs under the box, centered on it, center 4.0 below the row.
+  - `boxup: true` with `box`: the SIDE XARM sits ON the row line (bottom on the line, edge on the pole) when the PDF
+    draws the box above the line, as on a GUARD ARM/COMM X COND. Without it the box is centered on the row.
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
   - `rcs` RCS CONTROL BOX: template rectangle 2E3432 centered on its row, `k` `L`/`R` beside the pole (never mirrored).
   - `arm1` short one-sided arm (COMM ARM drawn as a short line out from the pole with a dot at its end): the guard

@@ -179,10 +179,60 @@ class NewRulesTest(unittest.TestCase):
                 dict(handle='L12', type='LINE', extents=ext(bot, top))]
         self.assertEqual(ph.pick_tlm_extra(ents), ['A', 'M', 'B12', 'L12'])
 
-    def test_tlm_over_20_reported(self):
-        J = self._sheet(tlm=dict(addr=[['%d A ST' % i, ''] for i in range(22)]))
-        self.assertEqual(len([op for k, op in J.ops if op['handles'] == ph.TLM_EXTRA['h']]), 10)
-        self.assertTrue(any('22 TLM addresses' in r for r in J.report))
+    def test_tlm_rows_to_frame_bottom(self):
+        # TD2486645 68718E: 60 customers all fit; more than fit is reported
+        J = self._sheet(tlm=dict(addr=[['%d A ST' % i, ''] for i in range(60)], notes=['A', 'B']))
+        self.assertEqual(len([op for k, op in J.ops if op['handles'] == ph.TLM_EXTRA['h']]), 50)
+        self.assertFalse(any('TLM addresses' in r for r in J.report))
+        J = self._sheet(tlm=dict(addr=[['%d A ST' % i, ''] for i in range(70)]))
+        self.assertTrue(any('70 TLM addresses' in r for r in J.report))
+
+    def test_street_only_keeps_unit(self):
+        self.assertEqual(ph.street_only('718 N MARKET ST APT 3 '), '718 N MARKET ST APT 3')
+        self.assertEqual(ph.street_only('1065 BURTONWOOD AVE THOUSAND OAKS CA'), '1065 BURTONWOOD AVE')
+
+    def test_fhlaf_sa_layout(self):
+        # Kevin's TD2486645 68719E correction: SAs -/+24.4618 (never mirrored), CUTOUTs -19.5139 / +19.5904, one XARM
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='fhlaf', ends='sa', pins=[0, 1, 3], slant={'0': 'L'}), 1)
+        sa = [(op['dx'] + 5147.4442, op.get('mirrorX')) for k, op in J.ops if op['handles'] == ['2E382D']]
+        self.assertEqual([(round(x, 4), m) for x, m in sa], [(-24.4618, None), (24.4618, None)])
+        co = sorted(round(op['dx'] + 5167.1696, 4) for k, op in J.ops if op['handles'] == ['2E382F'])
+        self.assertEqual(co, [-19.5139, 19.5904])
+        self.assertEqual(sum(op['handles'].count(ph.SRC['arm']['h'][0]) for k, op in J.ops), 1)
+
+    def test_xcond_starts_at_side_box(self):
+        # TD2486645 659344E 21'6": box R centered, X COND from the box edge
+        J = ph.Job()
+        a = ph.place_item(J, 0, 0, dict(t='xr', box='R'), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['xr']['h'])
+        self.assertAlmostEqual(op['dx'] + ph.SRC['xr']['px'], 5)
+        self.assertEqual(a, 30)
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='xb', box='R', boxup=True), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['xr']['h'])
+        self.assertAlmostEqual(op['dx'] + ph.SRC['xr']['px'], 0)
+
+    def test_pri_dot_under_box(self):
+        # TD2486645 4352147E 32'6": dot centered under the right box, 4.0 below the row
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='pri', k='R', dot=True), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['dot']['h'])
+        self.assertAlmostEqual(op['dx'] + ph.SRC['dot']['px'], 2.5)
+        self.assertAlmostEqual(op['dy'] + ph.SRC['dot']['py'], -4.0)
+
+    def test_pinx_boxup_stlt(self):
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='arm', pinx=[9.755, 19.755, 29.755]), 1)
+        xs = sorted(op['dx'] + ph.SRC['arm']['px'] + ph.ARM_SLOT_X[0] for k, op in J.ops if op['handles'] == [ph.ARM_PINS[0]])
+        self.assertEqual([round(x, 3) for x in xs], [9.755, 19.755, 29.755])
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='xb', box='R', boxup=True), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['sbox']['h'])
+        self.assertAlmostEqual(op['dy'] + ph.SRC['sbox']['py'], 2.5)
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='stlt', k='C'), 1)
+        self.assertEqual(J.ops[0][1]['handles'], [ph.SL_FRONT[0]])
 
     def test_calc_indent_under_lettered_loads(self):
         J = ph.Job()
@@ -217,7 +267,7 @@ class NewRulesTest(unittest.TestCase):
                 op = next(op for k, op in J.ops if op['handles'] == [h])
                 _, ix, iy = ph.SLANT_PIN['L' if h == '2E3477' else 'R']
                 self.assertAlmostEqual(ix + op['dx'], 100 + ph.ARM_SLOT_X[slot], 3)
-                self.assertAlmostEqual(iy + op['dy'], row + 0.2, 3)
+                self.assertAlmostEqual(iy + op['dy'], row, 3)   # base on the arm line (TD2486645)
                 self.assertNotIn('mirrorX', op)
 
     def test_slant_rejected_without_pins(self):

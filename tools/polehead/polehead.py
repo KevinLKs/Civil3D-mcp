@@ -110,10 +110,19 @@ SRC = {
     'sbox':   dict(h=['2E3912'], px=4697.5843, py=-1446.6283),   # lone SIDE XARM, box pole to pole + 5
 }
 ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.13, +29.76
+SL_FRONT = ('2E38CF', 5264.5156, -1718.0507)   # SIDE SL (front facing street light), insertion on the Builder pole
+SL_FRONT_HW = 3.86                              # half width of the lamp head
+SL_SIDE = ('2E38D1', 5177.3026, -1718.0507)     # SL (side street light facing right), insertion at the pole
+SL_SIDE_L = 29.06
+FHLAF_SA_PIECE = ('2E382D', 5147.4442, -1341.8281)     # SURGE ARRESTER in the FH/LA arm example
+FHLAF_CO_PIECE = ('2E382F', 5167.1696, -1341.8285)     # CUTOUT in the FH/LA arm example
+FHLAF_SA_X = 24.4618
+FHLAF_CO_X = (-19.5139, 19.5904)
+PRI_DOT_DROP = 4.0                                  # dot under a side arm box: center below the row
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 ARM_SLOT_X = [-29.7551, -12.128, 12.128, 29.7551]   # pin / circle slot offsets from the arm center
 DE1_PINS = ('2E3419', '2E3916')
-# slanted VERT P&I, already rotated in the template (never rotate): insertion = pin base, 0.2 above its arm line
+# slanted VERT P&I, already rotated in the template (never rotate): insertion = pin base, ON its arm line (0.2 above left a gap, TD2486645)
 SLANT_PIN = {'L': ('2E3477', 4529.5100, -1471.6283),    # leaning left, 25 deg (mirrored)
              'R': ('2E3472', 4525.7361, -1496.6283)}    # leaning right, 335 deg
 SG_LEN = 33.76
@@ -305,11 +314,15 @@ def place_item(J, P, r, it, sc):
         J.cp(src['h'], P + off - src['px'], r - src['py'])
         a = max(sc * (off - 5.21), sc * (off + 5.21), 0)
     elif t in ('xr', 'xl', 'xb'):
+        # a centered side box (comm arm) on the X COND's side: the X COND starts at the box's outer edge (P +/- 5),
+        # not at the pole (Kevin's TD2486645 659344E 21'6" correction). A box sitting on the line (boxup) does not.
+        bside = {'R': 1, 'L': -1}.get(it.get('box')) if not it.get('boxup') else None
         for d in {'xr': ['xr'], 'xl': ['xl'], 'xb': ['xr', 'xl']}[t]:
             src = SRC[d]
-            J.cp(src['h'], P - src['px'], r - src['py'])
+            dd = 1 if d == 'xr' else -1
+            J.cp(src['h'], P + (5 * dd if bside == dd else 0) - src['px'], r - src['py'])
         dirs = {'xr': [1], 'xl': [-1], 'xb': [1, -1]}[t]
-        a = 25 if sc in dirs else 0
+        a = (30 if bside == sc else 25) if sc in dirs else 0
     elif t == 'rcs':
         # RCS CONTROL BOX: the oddly shaped template rectangle 2E3432 (6.5467 x 8.746), centered on its row, edge on
         # the pole line on the side the PDF draws it (k 'L' or 'R'). Plain polyline, so mirroring would also be fine.
@@ -338,6 +351,15 @@ def place_item(J, P, r, it, sc):
         hs, px, py, ext_r, ext_l = PH[k]
         J.cp(hs, P - px, r - py)
         a = ext_r if sc > 0 else ext_l
+    elif t == 'stlt':
+        # ST LT: k 'C' front facing SIDE SL (2E38CF, insertion on the pole at the row, lamp above it);
+        # k 'R' side SL (2E38D1, arm out to the right), k 'L' the same mirrored
+        if k == 'C':
+            J.cp([SL_FRONT[0]], P - SL_FRONT[1], r - SL_FRONT[2])
+            a = SL_FRONT_HW
+        else:
+            J.cp([SL_SIDE[0]], P - SL_SIDE[1], r - SL_SIDE[2], mirror=P if k == 'L' else None)
+            a = SL_SIDE_L if (1 if k == 'R' else -1) == sc else 0
     elif t in ('dot', 'none'):
         pass                                               # dot: handled below; none: only a 'box' (guard arm, comm box)
     elif t == 'riser':
@@ -381,13 +403,35 @@ def place_item(J, P, r, it, sc):
         hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', []) if i not in slant] + \
             [ARM_CIRC[i] for i in it.get('circ', [])]
         J.cp(hs, P + sh - src['px'], r - src['py'])
-        for i, d in sorted(slant.items()):             # slanted VERT P&I: base on the slot, arm line + 0.2
+        for i, d in sorted(slant.items()):             # slanted VERT P&I: base on the slot, on the arm line
             h, ix, iy = SLANT_PIN[d]
-            J.cp([h], P + sh + ARM_SLOT_X[i] - ix, (r + 0.2) - iy)
+            J.cp([h], P + sh + ARM_SLOT_X[i] - ix, r - iy)
+        for ox in it.get('pinx', []):                  # pins at any offset from the pole, e.g. a 3/C secondary
+            J.cp([ARM_PINS[0]], P + sh + ox - (src['px'] + ARM_SLOT_X[0]), r - src['py'])   # drawn right of the pole
         for i in it.get('dots', []):                   # SEC-MISC dots on the arm (comm / CATV seen end on)
             d = SRC['dot']
             J.cp(d['h'], P + sh + ARM_SLOT_X[i] - d['px'], r - d['py'])
         a = max(sc * (sh - 35), sc * (sh + 35), 0)
+    elif t == 'fhlaf' and it.get('ends') == 'sa':
+        # FH & LA arm, SAs outboard, CUTOUTs inboard, laid out like Kevin's TD2486645 68719E correction:
+        # SAs at -/+24.4618 (symmetric, never mirrored), CUTOUTs at -19.5139 / +19.5904 (never mirrored), and the
+        # arm's own pins / circles / slanted pins on their slots (spec pins, circ, slant), so no second XARM is drawn.
+        xa = SRC['arm']
+        J.cp(xa['h'], P - xa['px'], r - xa['py'])
+        sa, sx, sy = FHLAF_SA_PIECE
+        co, cx, cy = FHLAF_CO_PIECE
+        J.cp([sa], P - FHLAF_SA_X - sx, r - sy)
+        J.cp([sa], P + FHLAF_SA_X - sx, r - sy)            # SA is symmetric: never mirrored
+        J.cp([co], P + FHLAF_CO_X[0] - cx, r - cy)
+        J.cp([co], P + FHLAF_CO_X[1] - cx, r - cy)
+        slant = {int(i): d for i, d in (it.get('slant') or {}).items()}
+        hs = [ARM_PINS[i] for i in it.get('pins', []) if i not in slant] + [ARM_CIRC[i] for i in it.get('circ', [])]
+        if hs:
+            J.cp(hs, P - xa['px'], r - xa['py'])
+        for i, d in sorted(slant.items()):
+            h, ix, iy = SLANT_PIN[d]
+            J.cp([h], P + ARM_SLOT_X[i] - ix, r - iy)
+        a = 35
     elif t in ('fhlaf', 'arm2fl'):
         if it.get('slant'):
             raise ValueError('%s: slant is only supported on arm, arm2 and arm4' % t)
@@ -421,7 +465,8 @@ def place_item(J, P, r, it, sc):
         # point. With an omni switch the box hangs just below the row line (box top on the line) and the omni sits
         # at the box center height (template example: omni 4690.0843 and box 4695.0843, both at -1596.6283).
         src = SRC['sbox']
-        by = r - 2.5 if it.get('omni') else r
+        # boxup: the PDF draws the box sitting ON the line (bottom on the row, edge on the pole), not centered
+        by = r - 2.5 if it.get('omni') else (r + 2.5 if it.get('boxup') else r)
         J.cp(src['h'], P - src['px'], by - src['py'], mirror=P if it['box'] == 'L' else None)
         if (1 if it['box'] == 'R' else -1) == sc:
             a = max(a, 5)
@@ -432,7 +477,13 @@ def place_item(J, P, r, it, sc):
             J.cp(['2E344E'], (P + d * 7.5) - 4580.5129, by - (-1596.6283))
     if t == 'dot' or it.get('dot'):
         src = SRC['dot']
-        J.cp(src['h'], P - src['px'], r - src['py'])
+        if t == 'pri':
+            # dot hanging under a side arm box: centered on the box, center 4.0 below the row (just under the
+            # box bottom), Kevin's TD2486645 4352147E 32'6" correction
+            dx = {'R': 2.5, 'L': -2.5}.get(k, 0)
+            J.cp(src['h'], P + dx - src['px'], (r - PRI_DOT_DROP) - src['py'])
+        else:
+            J.cp(src['h'], P - src['px'], r - src['py'])
     return a
 
 
@@ -459,6 +510,11 @@ def build_pole(J, P, G, spec):
         it['G'] = G
         it['a'] = place_item(J, P, G + it['row'], it, sc)
         top = max(top, it['row'])
+    for it in items:
+        # a shared item (the other SG half) sticking out further on the dim side: the row's dim ends at its tip
+        if it.get('share'):
+            host = next(o for o in items if o is not it and not o.get('share') and o['row'] == it['row'])
+            host['a'] = max(host['a'], it['a'])
     # callout column: 5.75 past the farthest equipment on the callout side (arm 35 -> 40.75, dead end 30 -> 35.75)
     col = max([COL_MIN] + [it['a'] + COL_GAP for it in items])
     J.tag(part='callout')

@@ -21,3 +21,7 @@ Read when something misbehaves, before a hand-built job with moves, mirrors or d
 - Stale dim graphics: ask Kevin to REGEN.
 
 - Circles and arcs: `edit` takes `center`, `radius`, and on arcs `startAngleDeg` / `endAngleDeg` (degrees CCW from +X; the arc runs CCW from start to end). Needs the plugin build with this change (PR #23); an older build rejects or ignores these fields, so redeploy the plugin before a job that uses them.
+
+## Moves ignore mirrorX
+
+- A copy op with `mode: "move"` and `mirrorX` moves the entity but does not mirror it (seen in TD2486645). To mirror an existing entity, copy it with `mirrorX` (no mode) and erase the original in the same job.
