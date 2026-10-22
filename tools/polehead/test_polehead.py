@@ -220,6 +220,12 @@ class NewRulesTest(unittest.TestCase):
         op = next(op for k, op in J.ops if op['handles'] == ph.SRC['dot']['h'])
         self.assertAlmostEqual(op['dx'] + ph.SRC['dot']['px'], 2.5)
         self.assertAlmostEqual(op['dy'] + ph.SRC['dot']['py'], -4.0)
+        # TD2486645 1495939E 32'6": one-way dead end right, dot under the right box
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='de1', k='R', nopins=True, dot=True), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['dot']['h'])
+        self.assertAlmostEqual(op['dx'] + ph.SRC['dot']['px'], 2.5)
+        self.assertAlmostEqual(op['dy'] + ph.SRC['dot']['py'], -4.0)
 
     def test_pinx_boxup_stlt(self):
         J = ph.Job()

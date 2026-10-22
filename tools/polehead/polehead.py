@@ -477,9 +477,10 @@ def place_item(J, P, r, it, sc):
             J.cp(['2E344E'], (P + d * 7.5) - 4580.5129, by - (-1596.6283))
     if t == 'dot' or it.get('dot'):
         src = SRC['dot']
-        if t == 'pri':
-            # dot hanging under a side arm box: centered on the box, center 4.0 below the row (just under the
-            # box bottom), Kevin's TD2486645 4352147E 32'6" correction
+        if t in ('pri', 'de1', 'de2'):
+            # dot hanging under a side arm or dead end box: centered on the box on the k side (dead end: the arrow
+            # side), center 4.0 below the row (just under the box bottom), Kevin's TD2486645 4352147E and
+            # 1495939E 32'6" corrections
             dx = {'R': 2.5, 'L': -2.5}.get(k, 0)
             J.cp(src['h'], P + dx - src['px'], (r - PRI_DOT_DROP) - src['py'])
         else:
