@@ -67,6 +67,12 @@ for `qc.py` (see below).
     middle of its wall on the dim point). With `omni` the box hangs just below the row line and the omni sits at the box center.
   - Pins drawn with a circle at their base (4/C arms on Builder pages): use `arm` with `pins` AND `circ` (e.g. `[0,1,2,3]` both).
   - `omni: true` with `box`: INV OMNI CLOSED with its insertion 5 beside the SIDE XARM insertion, on the box's side (HZ INV OMNI SW).
+  - `stlt` street light (ST LT): `k: "C"` front facing SIDE SL (2E38CF) on the pole at its row; `k: "R"` side SL
+    (2E38D1) arm out to the right, `k: "L"` mirrored.
+  - `pinx` on `arm`: pins at any offsets from the pole, e.g. a 3/C secondary drawn with all three pins right of the
+    pole: `"pinx": [9.755, 19.755, 29.755]`. Draw pins where the PDF draws them; never move them to the standard slots.
+  - `boxup: true` with `box`: the SIDE XARM sits ON the row line (bottom on the line, edge on the pole) when the PDF
+    draws the box above the line, as on a GUARD ARM/COMM X COND. Without it the box is centered on the row.
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
   - `rcs` RCS CONTROL BOX: template rectangle 2E3432 centered on its row, `k` `L`/`R` beside the pole (never mirrored).
   - `arm1` short one-sided arm (COMM ARM drawn as a short line out from the pole with a dot at its end): the guard

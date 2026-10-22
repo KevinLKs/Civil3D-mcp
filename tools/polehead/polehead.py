@@ -110,6 +110,10 @@ SRC = {
     'sbox':   dict(h=['2E3912'], px=4697.5843, py=-1446.6283),   # lone SIDE XARM, box pole to pole + 5
 }
 ARM_PINS = ['2E3401', '2E3402', '2E3404', '2E3403']      # -29.76, -12.13, +12.13, +29.76
+SL_FRONT = ('2E38CF', 5264.5156, -1718.0507)   # SIDE SL (front facing street light), insertion on the Builder pole
+SL_FRONT_HW = 3.86                              # half width of the lamp head
+SL_SIDE = ('2E38D1', 5177.3026, -1718.0507)     # SL (side street light facing right), insertion at the pole
+SL_SIDE_L = 29.06
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 ARM_SLOT_X = [-29.7551, -12.128, 12.128, 29.7551]   # pin / circle slot offsets from the arm center
 DE1_PINS = ('2E3419', '2E3916')
@@ -338,6 +342,15 @@ def place_item(J, P, r, it, sc):
         hs, px, py, ext_r, ext_l = PH[k]
         J.cp(hs, P - px, r - py)
         a = ext_r if sc > 0 else ext_l
+    elif t == 'stlt':
+        # ST LT: k 'C' front facing SIDE SL (2E38CF, insertion on the pole at the row, lamp above it);
+        # k 'R' side SL (2E38D1, arm out to the right), k 'L' the same mirrored
+        if k == 'C':
+            J.cp([SL_FRONT[0]], P - SL_FRONT[1], r - SL_FRONT[2])
+            a = SL_FRONT_HW
+        else:
+            J.cp([SL_SIDE[0]], P - SL_SIDE[1], r - SL_SIDE[2], mirror=P if k == 'L' else None)
+            a = SL_SIDE_L if (1 if k == 'R' else -1) == sc else 0
     elif t in ('dot', 'none'):
         pass                                               # dot: handled below; none: only a 'box' (guard arm, comm box)
     elif t == 'riser':
@@ -384,6 +397,8 @@ def place_item(J, P, r, it, sc):
         for i, d in sorted(slant.items()):             # slanted VERT P&I: base on the slot, arm line + 0.2
             h, ix, iy = SLANT_PIN[d]
             J.cp([h], P + sh + ARM_SLOT_X[i] - ix, (r + 0.2) - iy)
+        for ox in it.get('pinx', []):                  # pins at any offset from the pole, e.g. a 3/C secondary
+            J.cp([ARM_PINS[0]], P + sh + ox - (src['px'] + ARM_SLOT_X[0]), r - src['py'])   # drawn right of the pole
         for i in it.get('dots', []):                   # SEC-MISC dots on the arm (comm / CATV seen end on)
             d = SRC['dot']
             J.cp(d['h'], P + sh + ARM_SLOT_X[i] - d['px'], r - d['py'])
@@ -421,7 +436,8 @@ def place_item(J, P, r, it, sc):
         # point. With an omni switch the box hangs just below the row line (box top on the line) and the omni sits
         # at the box center height (template example: omni 4690.0843 and box 4695.0843, both at -1596.6283).
         src = SRC['sbox']
-        by = r - 2.5 if it.get('omni') else r
+        # boxup: the PDF draws the box sitting ON the line (bottom on the row, edge on the pole), not centered
+        by = r - 2.5 if it.get('omni') else (r + 2.5 if it.get('boxup') else r)
         J.cp(src['h'], P - src['px'], by - src['py'], mirror=P if it['box'] == 'L' else None)
         if (1 if it['box'] == 'R' else -1) == sc:
             a = max(a, 5)

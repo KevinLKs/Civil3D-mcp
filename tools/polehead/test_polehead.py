@@ -179,10 +179,30 @@ class NewRulesTest(unittest.TestCase):
                 dict(handle='L12', type='LINE', extents=ext(bot, top))]
         self.assertEqual(ph.pick_tlm_extra(ents), ['A', 'M', 'B12', 'L12'])
 
-    def test_tlm_over_20_reported(self):
-        J = self._sheet(tlm=dict(addr=[['%d A ST' % i, ''] for i in range(22)]))
-        self.assertEqual(len([op for k, op in J.ops if op['handles'] == ph.TLM_EXTRA['h']]), 10)
-        self.assertTrue(any('22 TLM addresses' in r for r in J.report))
+    def test_tlm_rows_to_frame_bottom(self):
+        # TD2486645 68718E: 60 customers all fit; more than fit is reported
+        J = self._sheet(tlm=dict(addr=[['%d A ST' % i, ''] for i in range(60)], notes=['A', 'B']))
+        self.assertEqual(len([op for k, op in J.ops if op['handles'] == ph.TLM_EXTRA['h']]), 50)
+        self.assertFalse(any('TLM addresses' in r for r in J.report))
+        J = self._sheet(tlm=dict(addr=[['%d A ST' % i, ''] for i in range(70)]))
+        self.assertTrue(any('70 TLM addresses' in r for r in J.report))
+
+    def test_street_only_keeps_unit(self):
+        self.assertEqual(ph.street_only('718 N MARKET ST APT 3 '), '718 N MARKET ST APT 3')
+        self.assertEqual(ph.street_only('1065 BURTONWOOD AVE THOUSAND OAKS CA'), '1065 BURTONWOOD AVE')
+
+    def test_pinx_boxup_stlt(self):
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='arm', pinx=[9.755, 19.755, 29.755]), 1)
+        xs = sorted(op['dx'] + ph.SRC['arm']['px'] + ph.ARM_SLOT_X[0] for k, op in J.ops if op['handles'] == [ph.ARM_PINS[0]])
+        self.assertEqual([round(x, 3) for x in xs], [9.755, 19.755, 29.755])
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='xb', box='R', boxup=True), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['sbox']['h'])
+        self.assertAlmostEqual(op['dy'] + ph.SRC['sbox']['py'], 2.5)
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='stlt', k='C'), 1)
+        self.assertEqual(J.ops[0][1]['handles'], [ph.SL_FRONT[0]])
 
     def test_calc_indent_under_lettered_loads(self):
         J = ph.Job()
