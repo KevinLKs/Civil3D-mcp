@@ -118,6 +118,7 @@ FHLAF_SA_PIECE = ('2E382D', 5147.4442, -1341.8281)     # SURGE ARRESTER in the F
 FHLAF_CO_PIECE = ('2E382F', 5167.1696, -1341.8285)     # CUTOUT in the FH/LA arm example
 FHLAF_SA_X = 24.4618
 FHLAF_CO_X = (-19.5139, 19.5904)
+PRI_DOT_DROP = 4.0                                  # dot under a side arm box: center below the row
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 ARM_SLOT_X = [-29.7551, -12.128, 12.128, 29.7551]   # pin / circle slot offsets from the arm center
 DE1_PINS = ('2E3419', '2E3916')
@@ -476,7 +477,13 @@ def place_item(J, P, r, it, sc):
             J.cp(['2E344E'], (P + d * 7.5) - 4580.5129, by - (-1596.6283))
     if t == 'dot' or it.get('dot'):
         src = SRC['dot']
-        J.cp(src['h'], P - src['px'], r - src['py'])
+        if t == 'pri':
+            # dot hanging under a side arm box: centered on the box, center 4.0 below the row (just under the
+            # box bottom), Kevin's TD2486645 4352147E 32'6" correction
+            dx = {'R': 2.5, 'L': -2.5}.get(k, 0)
+            J.cp(src['h'], P + dx - src['px'], (r - PRI_DOT_DROP) - src['py'])
+        else:
+            J.cp(src['h'], P - src['px'], r - src['py'])
     return a
 
 

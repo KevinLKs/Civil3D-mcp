@@ -213,6 +213,14 @@ class NewRulesTest(unittest.TestCase):
         op = next(op for k, op in J.ops if op['handles'] == ph.SRC['xr']['h'])
         self.assertAlmostEqual(op['dx'] + ph.SRC['xr']['px'], 0)
 
+    def test_pri_dot_under_box(self):
+        # TD2486645 4352147E 32'6": dot centered under the right box, 4.0 below the row
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='pri', k='R', dot=True), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['dot']['h'])
+        self.assertAlmostEqual(op['dx'] + ph.SRC['dot']['px'], 2.5)
+        self.assertAlmostEqual(op['dy'] + ph.SRC['dot']['py'], -4.0)
+
     def test_pinx_boxup_stlt(self):
         J = ph.Job()
         ph.place_item(J, 0, 0, dict(t='arm', pinx=[9.755, 19.755, 29.755]), 1)

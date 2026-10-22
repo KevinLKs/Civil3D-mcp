@@ -73,6 +73,7 @@ for `qc.py` (see below).
     pole: `"pinx": [9.755, 19.755, 29.755]`. Draw pins where the PDF draws them; never move them to the standard slots.
   - `box` on `xr`/`xl`/`xb` (centered on the row): the X COND on the box's side starts at the box's outer edge
     (pole + 5), not at the pole, e.g. COMM ARM, COMM SVC drawn as a box with an arrow out of it.
+  - `dot: true` on `pri`: the SEC-MISC dot hangs under the box, centered on it, center 4.0 below the row.
   - `boxup: true` with `box`: the SIDE XARM sits ON the row line (bottom on the line, edge on the pole) when the PDF
     draws the box above the line, as on a GUARD ARM/COMM X COND. Without it the box is centered on the row.
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
