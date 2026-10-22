@@ -192,11 +192,11 @@ class NewRulesTest(unittest.TestCase):
         self.assertEqual(ph.street_only('1065 BURTONWOOD AVE THOUSAND OAKS CA'), '1065 BURTONWOOD AVE')
 
     def test_fhlaf_sa_layout(self):
-        # Kevin's TD2486645 68719E correction: SAs -/+24.4618 (right mirrored), CUTOUTs -19.5139 / +19.5904, one XARM
+        # Kevin's TD2486645 68719E correction: SAs -/+24.4618 (never mirrored), CUTOUTs -19.5139 / +19.5904, one XARM
         J = ph.Job()
         ph.place_item(J, 0, 0, dict(t='fhlaf', ends='sa', pins=[0, 1, 3], slant={'0': 'L'}), 1)
         sa = [(op['dx'] + 5147.4442, op.get('mirrorX')) for k, op in J.ops if op['handles'] == ['2E382D']]
-        self.assertEqual([(round(x, 4), m) for x, m in sa], [(-24.4618, None), (24.4618, 24.4618)])
+        self.assertEqual([(round(x, 4), m) for x, m in sa], [(-24.4618, None), (24.4618, None)])
         co = sorted(round(op['dx'] + 5167.1696, 4) for k, op in J.ops if op['handles'] == ['2E382F'])
         self.assertEqual(co, [-19.5139, 19.5904])
         self.assertEqual(sum(op['handles'].count(ph.SRC['arm']['h'][0]) for k, op in J.ops), 1)

@@ -409,14 +409,14 @@ def place_item(J, P, r, it, sc):
         a = max(sc * (sh - 35), sc * (sh + 35), 0)
     elif t == 'fhlaf' and it.get('ends') == 'sa':
         # FH & LA arm, SAs outboard, CUTOUTs inboard, laid out like Kevin's TD2486645 68719E correction:
-        # SAs at -/+24.4618 (the right one mirrored), CUTOUTs at -19.5139 / +19.5904 (never mirrored), and the
+        # SAs at -/+24.4618 (symmetric, never mirrored), CUTOUTs at -19.5139 / +19.5904 (never mirrored), and the
         # arm's own pins / circles / slanted pins on their slots (spec pins, circ, slant), so no second XARM is drawn.
         xa = SRC['arm']
         J.cp(xa['h'], P - xa['px'], r - xa['py'])
         sa, sx, sy = FHLAF_SA_PIECE
         co, cx, cy = FHLAF_CO_PIECE
         J.cp([sa], P - FHLAF_SA_X - sx, r - sy)
-        J.cp([sa], P + FHLAF_SA_X - sx, r - sy, mirror=P + FHLAF_SA_X)
+        J.cp([sa], P + FHLAF_SA_X - sx, r - sy)            # SA is symmetric: never mirrored
         J.cp([co], P + FHLAF_CO_X[0] - cx, r - cy)
         J.cp([co], P + FHLAF_CO_X[1] - cx, r - cy)
         slant = {int(i): d for i, d in (it.get('slant') or {}).items()}
