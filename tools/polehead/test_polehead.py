@@ -237,7 +237,7 @@ class NewRulesTest(unittest.TestCase):
                 op = next(op for k, op in J.ops if op['handles'] == [h])
                 _, ix, iy = ph.SLANT_PIN['L' if h == '2E3477' else 'R']
                 self.assertAlmostEqual(ix + op['dx'], 100 + ph.ARM_SLOT_X[slot], 3)
-                self.assertAlmostEqual(iy + op['dy'], row + 0.2, 3)
+                self.assertAlmostEqual(iy + op['dy'], row, 3)   # base on the arm line (TD2486645)
                 self.assertNotIn('mirrorX', op)
 
     def test_slant_rejected_without_pins(self):

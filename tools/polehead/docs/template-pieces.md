@@ -27,7 +27,7 @@ Read when hand-building or fixing something the generator does not place, or whe
 - SEC-MISC dot: 2A4FAD (center 3823.6518, -1005.5445).
 - X COND arrow, length 25: 2E3BD7 right, 2E3BD8 left, insertion (4402.66, -1420.70). Also left facing at (4784.9005, -1421.6283) and right facing at (4787.4005, -1389.6635).
 - 3 phase crossarm (row -1446.63, pole 4610.27): XARM 2E3400; VERT P&I 2E3401 (-29.76), 2E3402 (-12.13), 2E3404 (+12.13), 2E3403 (+29.76); conductor circles (ELECTRIC) 2E3405, 2E3408, 2E3407, 2E3406. Pin with base circle example: VERT P&I 2A4C2F with CIRCLE 2A4C31 (4300.1486, -168.0103).
-- Slanted pins (already rotated; copy, never rotate): LEFT 2E3477 (25 deg, insertion 4529.5100, -1471.6283); RIGHT 2E3472 (335 deg, insertion 4525.7361, -1496.6283). Insertion = pin base, 0.2 above the arm line.
+- Slanted pins (already rotated; copy, never rotate): LEFT 2E3477 (25 deg, insertion 4529.5100, -1471.6283); RIGHT 2E3472 (335 deg, insertion 4525.7361, -1496.6283). Insertion = pin base, ON the arm line (0.2 above leaves a visible gap).
 - Closed inverted omni on xarm (row -1596.63): XARM 2E33F2, INV OMNI CLOSED 2E344E, 2E344F, 2E3451, 2E3450.
 - FH/LA arm, front (row -1341.83, pole 5177.20): XARM 2E380B; SA ends 2E382D (-29.76), 2E382E (+29.75) with inner CUTOUTs 2E382F (-10.03), 2E3831 (+10.04); or outer CUTOUTs 2E382B (-23.83), 2E382C (+23.86) with inner SAs 2E3830 (-15.96), 2E3832 (+15.94).
 - FH/LA side (row -1329.33, side pole 5264.5156): SURGE ARRESTER 2E3870, SIDE XARM 2E3806 (box left), CUTOUT 2E3872 (outer edge P + 5.43). The CUTOUT is NEVER mirrored. On the left it sits 1.1 clear of the leftmost box: center = leftmost box edge - 3.3132 (no box: P - 3.3132; dead end boxes: P - 8.3132).

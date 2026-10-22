@@ -117,7 +117,7 @@ SL_SIDE_L = 29.06
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 ARM_SLOT_X = [-29.7551, -12.128, 12.128, 29.7551]   # pin / circle slot offsets from the arm center
 DE1_PINS = ('2E3419', '2E3916')
-# slanted VERT P&I, already rotated in the template (never rotate): insertion = pin base, 0.2 above its arm line
+# slanted VERT P&I, already rotated in the template (never rotate): insertion = pin base, ON its arm line (0.2 above left a gap, TD2486645)
 SLANT_PIN = {'L': ('2E3477', 4529.5100, -1471.6283),    # leaning left, 25 deg (mirrored)
              'R': ('2E3472', 4525.7361, -1496.6283)}    # leaning right, 335 deg
 SG_LEN = 33.76
@@ -394,9 +394,9 @@ def place_item(J, P, r, it, sc):
         hs = src['h'] + [ARM_PINS[i] for i in it.get('pins', []) if i not in slant] + \
             [ARM_CIRC[i] for i in it.get('circ', [])]
         J.cp(hs, P + sh - src['px'], r - src['py'])
-        for i, d in sorted(slant.items()):             # slanted VERT P&I: base on the slot, arm line + 0.2
+        for i, d in sorted(slant.items()):             # slanted VERT P&I: base on the slot, on the arm line
             h, ix, iy = SLANT_PIN[d]
-            J.cp([h], P + sh + ARM_SLOT_X[i] - ix, (r + 0.2) - iy)
+            J.cp([h], P + sh + ARM_SLOT_X[i] - ix, r - iy)
         for ox in it.get('pinx', []):                  # pins at any offset from the pole, e.g. a 3/C secondary
             J.cp([ARM_PINS[0]], P + sh + ox - (src['px'] + ARM_SLOT_X[0]), r - src['py'])   # drawn right of the pole
         for i in it.get('dots', []):                   # SEC-MISC dots on the arm (comm / CATV seen end on)
