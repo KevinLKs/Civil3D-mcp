@@ -475,6 +475,11 @@ def build_pole(J, P, G, spec):
         it['G'] = G
         it['a'] = place_item(J, P, G + it['row'], it, sc)
         top = max(top, it['row'])
+    for it in items:
+        # a shared item (the other SG half) sticking out further on the dim side: the row's dim ends at its tip
+        if it.get('share'):
+            host = next(o for o in items if o is not it and not o.get('share') and o['row'] == it['row'])
+            host['a'] = max(host['a'], it['a'])
     # callout column: 5.75 past the farthest equipment on the callout side (arm 35 -> 40.75, dead end 30 -> 35.75)
     col = max([COL_MIN] + [it['a'] + COL_GAP for it in items])
     J.tag(part='callout')
