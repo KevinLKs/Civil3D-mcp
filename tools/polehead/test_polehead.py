@@ -82,6 +82,32 @@ class StationBuilderTests(unittest.TestCase):
         self.assertEqual(out['elev'], '821')
 
 
+    def test_fill_ins_in_column_q(self):
+        # TD2536074: every fill-in sat in column Q, whole access notes included, with "NA" and comma-split years
+        rows = [[None, None, None, None] for _ in range(43)]
+        rows[5][1], rows[7][1] = "34\u00b011'56.58\"", "118\u00b051'40.57\""
+        rows[23] = ['-POLE SET IN ______, INSP. ______', None, None, '2014 , NA']
+        rows[24] = ['-ACCESS VIA STREET NAME', None, None, 'FOOT ACCESS VIA REAR PROPERTY OF 986 WAVERLY HEIGHTS DR']
+        rows[25] = ['-TRUCK ACCESS VIA STREET NAME', None, None, 'WINDSOR DR']
+        rows[26] = ['C0MM ANCHOR BEING ISNTALLED AT 4\'5"', None, None, '  ']
+        out = sbm.sheet_from_rows('P', [tuple(r) for r in rows], [])
+        self.assertEqual(out['notes'], ['-POLE SET IN 2014, INSP. N/A',
+                                        '-FOOT ACCESS VIA REAR PROPERTY OF 986 WAVERLY HEIGHTS DR',
+                                        '-TRUCK ACCESS VIA WINDSOR DR', '-COMM ANCHOR BEING INSTALLED AT 4\'5"'])
+
+
+class ShortArmTest(unittest.TestCase):
+    def test_arm1_left_with_dot_at_the_end(self):
+        J = ph.Job()
+        a = ph.place_item(J, 100.0, -50.0, dict(t='arm1', k='L', h="18'"), -1)
+        self.assertEqual(a, 17.5)                  # callouts on the arm side: dim attaches at the arm end
+        line = [e for _, h, e in J.edits if h == ph.GALINE[0]][0]
+        self.assertEqual((line['start']['x'], line['end']['x']), (82.5, 100.0))
+        dot = [op for _, op in J.ops if op['handles'] == ph.SRC['dot']['h']][0]
+        self.assertAlmostEqual(dot['dx'] + ph.SRC['dot']['px'], 82.5, places=3)
+        self.assertEqual(ph.place_item(ph.Job(), 100.0, -50.0, dict(t='arm1', k='L', h="18'"), 1), 0)
+
+
 class NewRulesTest(unittest.TestCase):
     def _sheet(self, **kw):
         J = ph.Job()

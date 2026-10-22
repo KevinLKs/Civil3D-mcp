@@ -3,7 +3,7 @@
 
     python station_builder.py "<TD> - STATION BUILDER.xlsx" 1414703E 4904169E ... > sheets.json
 
-Reads ONLY columns N:P, rows 4 to 46 of each pole tab (the tabs are thousands of
+Reads ONLY columns N:Q, rows 4 to 46 of each pole tab (the tabs are thousands of
 rows long). Output: {pole: {crew, notes, gps, elev}} plus a "report" list of
 things worth a look. Merge these into the job spec's poles.
 """
@@ -13,13 +13,15 @@ import json
 import re
 import sys
 
-FIX = {'DEFUALT': 'DEFAULT', 'REQUIRMENT': 'REQUIREMENT', 'EASMENT': 'EASEMENT', 'UKNOWN': 'UNKNOWN', 'VEGITATION': 'VEGETATION'}
+FIX = {'DEFUALT': 'DEFAULT', 'REQUIRMENT': 'REQUIREMENT', 'EASMENT': 'EASEMENT', 'UKNOWN': 'UNKNOWN', 'VEGITATION': 'VEGETATION',
+       'OBSTUCTION': 'OBSTRUCTION', 'ISNTALLED': 'INSTALLED'}
 
 
 def clean(t):
     t = ' '.join(str(t).replace('\n', ' ').split()).upper()
     for a, b in FIX.items():
         t = t.replace(a, b)
+    t = re.sub(r'\bC0MM\b', 'COMM', t)          # zero typed for the letter O
     return t
 
 
@@ -34,11 +36,11 @@ def read_rows(xlsx, pole):
         if len(hits) != 1:
             raise KeyError(pole)
         ws = wb[hits[0]]
-    return [tuple(c.value for c in row) for row in ws.iter_rows(min_row=4, max_row=46, min_col=14, max_col=16)]
+    return [tuple(c.value for c in row) for row in ws.iter_rows(min_row=4, max_row=46, min_col=14, max_col=17)]
 
 
 def sheet_from_rows(pole, rows, report):
-    """rows[i] = (N, O, P) of row 4 + i."""
+    """rows[i] = (N, O, P, Q) of row 4 + i. Fill-ins can sit in O, P or Q (planners vary)."""
     crew, notes = [], []
     for i in range(13, 22):                      # N17..N25
         v = rows[i][0]
@@ -46,21 +48,29 @@ def sheet_from_rows(pole, rows, report):
             c = clean(v)
             crew.append(c if c.startswith('-') else '-' + c)
     for i in range(23, 43):                      # N27..N46
-        v, o, q = rows[i]
+        v, o, p, q = (tuple(rows[i]) + (None,) * 4)[:4]
+        o, p, q = [x if not isinstance(x, str) or x.strip() else None for x in (o, p, q)]
         if not v and o:                          # planners type whole notes in column O with N empty: still a note
-            v, o, q = o, None, None
+            v, o, p, q = o, None, None, None
         if not v:
             continue
         t = clean(v)
-        fill = ' '.join(str(x) for x in (o, q) if x)
+        fill = ' '.join(str(x).strip() for x in (o, p, q) if x)
         if 'POLE SET IN' in t:
             if fill:
-                a, _, b = fill.partition('INSP.')
-                t = '-POLE SET IN %s, INSP. %s' % (a.strip(' ,') or 'N/A', b.strip() or 'N/A')
+                f = clean(fill)
+                if 'INSP.' in f:
+                    a, _, b = f.partition('INSP.')
+                else:                            # "2014 , N/A" = set year, inspection year
+                    a, _, b = f.partition(',')
+                na = lambda x: 'N/A' if x.strip(' ,') in ('', 'NA', 'N/A') else x.strip(' ,')
+                t = '-POLE SET IN %s, INSP. %s' % (na(a), na(b))
             else:
                 t = '-POLE SET IN N/A, INSP. N/A'
         elif 'STREET NAME' in t:
-            if fill:
+            if fill and 'ACCESS' in clean(fill):   # whole access note typed as the fill-in: it replaces the template
+                t = clean(fill)
+            elif fill:
                 t = t.replace('STREET NAME', clean(fill))
         elif '___' in t and fill:
             t = t.split('___')[0].rstrip() + ' ' + clean(fill)

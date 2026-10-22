@@ -2,7 +2,9 @@
 
 Read on every job when building the note lines (step 3). `station_builder.py` applies most of these; check its output against them.
 
-## Source (Station Builder tab, columns N:P, rows 4 to 46)
+## Source (Station Builder tab, columns N:Q, rows 4 to 46)
+
+- Fill-ins can sit in O, P or Q depending on the planner (TD2536074 had them all in Q). A whole access note typed as the fill-in (`FOOT ACCESS VIA REAR PROPERTY OF ...`) replaces the `-ACCESS VIA STREET NAME` template. `2014 , NA` = set year, inspection year; NA becomes N/A.
 
 - LAT = O9, LONG = O11, ELEV = O13.
 - CREW NOTE lines: N17 to N25. Empty = no crew notes.

@@ -69,6 +69,8 @@ for `qc.py` (see below).
   - `omni: true` with `box`: INV OMNI CLOSED with its insertion 5 beside the SIDE XARM insertion, on the box's side (HZ INV OMNI SW).
   - `none`: no symbol of its own, used with `box` (a guard arm or comm box with its callout).
   - `rcs` RCS CONTROL BOX: template rectangle 2E3432 centered on its row, `k` `L`/`R` beside the pole (never mirrored).
+  - `arm1` short one-sided arm (COMM ARM drawn as a short line out from the pole with a dot at its end): the guard
+    arm line 2E3922 cut to `L` (default 17.5) toward `k` (`L`/`R`), SEC-MISC dot on the far end. Not an X COND.
   - `gal` guard arm drawn as a line through the pole: the 35 long line 2E3922 centered on the pole. `dots: [4.5, 10, 15.5]`
     hangs SEC-MISC dots (template 2A500C) under the line at those offsets from the pole (comm on a guard arm).
   - `ph` PH & LA (pothead): the template example group copied as is, `k: "L"` left leaning PH (box right of the

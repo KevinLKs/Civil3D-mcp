@@ -318,6 +318,17 @@ def place_item(J, P, r, it, sc):
         a = 17.5
         for ox in it.get('dots', []):                  # SEC-MISC dots hanging under the line (offsets from the pole)
             J.cp([GALDOT[0]], (P + ox) - GALDOT[1], r - GALDOT[2])
+    elif t == 'arm1':
+        # short one-sided arm (comm arm): the guard arm LINE 2E3922 cut to L (default 17.5) from the pole toward
+        # k ('L' / 'R'), with a SEC-MISC dot on its far end. The dim attaches at the arm end on the callout side.
+        d = 1 if k == 'R' else -1
+        L = float(it.get('L', 17.5))
+        x1 = P + d * L
+        J.cp([GALINE[0]], min(P, x1) - GALINE[1], r - GALINE[2],
+             edit=[dict(start=pt(min(P, x1), r), end=pt(max(P, x1), r))])
+        dsrc = SRC['dot']
+        J.cp(dsrc['h'], x1 - dsrc['px'], r - dsrc['py'])
+        a = L if d == sc else 0
     elif t == 'ph':
         # PH & LA: copy the template example group as is, k 'L' (left leaning PH) or 'R' (right leaning PH)
         hs, px, py, ext_r, ext_l = PH[k]
