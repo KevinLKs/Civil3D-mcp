@@ -201,6 +201,18 @@ class NewRulesTest(unittest.TestCase):
         self.assertEqual(co, [-19.5139, 19.5904])
         self.assertEqual(sum(op['handles'].count(ph.SRC['arm']['h'][0]) for k, op in J.ops), 1)
 
+    def test_xcond_starts_at_side_box(self):
+        # TD2486645 659344E 21'6": box R centered, X COND from the box edge
+        J = ph.Job()
+        a = ph.place_item(J, 0, 0, dict(t='xr', box='R'), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['xr']['h'])
+        self.assertAlmostEqual(op['dx'] + ph.SRC['xr']['px'], 5)
+        self.assertEqual(a, 30)
+        J = ph.Job()
+        ph.place_item(J, 0, 0, dict(t='xb', box='R', boxup=True), 1)
+        op = next(op for k, op in J.ops if op['handles'] == ph.SRC['xr']['h'])
+        self.assertAlmostEqual(op['dx'] + ph.SRC['xr']['px'], 0)
+
     def test_pinx_boxup_stlt(self):
         J = ph.Job()
         ph.place_item(J, 0, 0, dict(t='arm', pinx=[9.755, 19.755, 29.755]), 1)

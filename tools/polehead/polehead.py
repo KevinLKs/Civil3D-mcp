@@ -313,11 +313,15 @@ def place_item(J, P, r, it, sc):
         J.cp(src['h'], P + off - src['px'], r - src['py'])
         a = max(sc * (off - 5.21), sc * (off + 5.21), 0)
     elif t in ('xr', 'xl', 'xb'):
+        # a centered side box (comm arm) on the X COND's side: the X COND starts at the box's outer edge (P +/- 5),
+        # not at the pole (Kevin's TD2486645 659344E 21'6" correction). A box sitting on the line (boxup) does not.
+        bside = {'R': 1, 'L': -1}.get(it.get('box')) if not it.get('boxup') else None
         for d in {'xr': ['xr'], 'xl': ['xl'], 'xb': ['xr', 'xl']}[t]:
             src = SRC[d]
-            J.cp(src['h'], P - src['px'], r - src['py'])
+            dd = 1 if d == 'xr' else -1
+            J.cp(src['h'], P + (5 * dd if bside == dd else 0) - src['px'], r - src['py'])
         dirs = {'xr': [1], 'xl': [-1], 'xb': [1, -1]}[t]
-        a = 25 if sc in dirs else 0
+        a = (30 if bside == sc else 25) if sc in dirs else 0
     elif t == 'rcs':
         # RCS CONTROL BOX: the oddly shaped template rectangle 2E3432 (6.5467 x 8.746), centered on its row, edge on
         # the pole line on the side the PDF draws it (k 'L' or 'R'). Plain polyline, so mirroring would also be fine.
