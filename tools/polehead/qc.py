@@ -365,7 +365,7 @@ def lint(spec):
             if t.startswith('-'):
                 out.append((num, 'TLM note should not start with a dash: %r' % t))
         if len(tlm.get('addr') or []) > ph.TLM_MAX:
-            out.append((num, '%d TLM addresses; needs Kevin\'s guidance' % len(tlm['addr'])))
+            out.append((num, '%d TLM addresses, over the %d that fit a frame; needs Kevin\'s guidance' % (len(tlm['addr']), ph.TLM_MAX)))
     return out
 
 

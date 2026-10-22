@@ -154,7 +154,8 @@ TLM_L10_BOTTOM = 129.0591          # insertion y minus the bottom of the LIST 10
 TLM_ROW = 11.7326
 # Burst rows 11 to 20 (loose text and lines under a LIST 10 block). Row 12 is the copy source for every row.
 TLM_EXTRA = dict(h=['3975AC', '3975AD', '3975E9', '3975F7'], left=1854.666, top=-779.9231)
-TLM_MAX = 20
+TLM_MAX = 60                         # rows that fit above the frame bottom with a few TLM notes (tlm_fit checks the rest)
+FRAME_HALF_H = 702                   # frame is 1404 tall, C at its middle
 # Query this window (layers MISC) to find the row 12 pieces: TEXT starting ADDRESS (address), TEXT starting METER
 # (meter, center justified on x 1971.588), LWPOLYLINE (open box), LINE (divider). Pass them as spec 'tlm_extra'.
 TLM_EXTRA_WINDOW = dict(minX=1850, minY=-792.5, maxX=2003, maxY=-779.5)
@@ -189,12 +190,14 @@ class Job:
         self.meta = {}         # op key -> ctx at copy time
         self.keymap = {}       # op key -> group index, set by to_apply_job
         self.hatches = []      # riser guards: {boundaries: [('ref', key, handle)], like: handle}
+        self.hmap = {}         # spec 'handle_map': template handle -> handle of the same piece in THIS drawing
 
     def tag(self, **kw):
         self.ctx = dict(self.ctx, **kw)
 
     def cp(self, handles, dx, dy, mirror=None, edit=None):
         key = len(self.ops)
+        handles = [self.hmap.get(h, h) for h in handles]
         op = dict(handles=list(handles), dx=r4(dx), dy=r4(dy))
         if mirror is not None:
             op['mirrorX'] = r4(mirror)
@@ -689,10 +692,14 @@ def build_sheet(J, Cx, Cy, sheet):
         J.tag(part='sheet')
     tlm = sheet.get('tlm')
     if tlm:
-        addr = [[street_only(a), m] for a, m in tlm.get('addr', [])]
-        if len(addr) > TLM_MAX:
-            J.report.append('%s: %d TLM addresses, only the first %d fit; needs guidance' % (sheet['pole'], len(addr), TLM_MAX))
-            addr = addr[:TLM_MAX]
+        # 'raw': the source already lists street addresses only (unit tags like WSDR kept as written)
+        addr = [[' '.join(str(a).upper().split()) if tlm.get('raw') else street_only(a), m] for a, m in tlm.get('addr', [])]
+        # burst rows run down the TLM column until the table plus its TLM NOTE box would cross the frame bottom
+        nn = len(tlm.get('notes') or [])
+        fit = tlm_fit(Cy + 114.314, Cy - FRAME_HALF_H + 5, nn)
+        if len(addr) > fit:
+            J.report.append('%s: %d TLM addresses, only the first %d fit in the frame; needs guidance' % (sheet['pole'], len(addr), fit))
+            addr = addr[:fit]
         attr = {'STRUCTURE': sheet['pole'], 'CLIMATE-ZONE': tlm.get('cz', ''), 'VD-DROP': tlm.get('vd', ''),
                 'FLICKER': tlm.get('flicker', ''), 'PRI-CIRC': tlm.get('pc', '')}
         for pre in ('EX', 'PR'):
@@ -874,6 +881,15 @@ def tlm_bottom(iy, n):
     return iy - TLM_L10_BOTTOM - (n - 10) * TLM_ROW
 
 
+def tlm_fit(iy, floor, notes):
+    """Most address rows whose table (and TLM NOTE box, when there are notes) stays above floor."""
+    nh = (27.72 + 8.03 * (notes - 1)) if notes else 0
+    n = 10
+    while n < TLM_MAX and tlm_bottom(iy, n + 1) - nh >= floor:
+        n += 1
+    return n
+
+
 def pick_tlm_extra(entities):
     """Row 12 handles [address, meter, box, line] from a civil3d_entity query of TLM_EXTRA_WINDOW.
 
@@ -904,15 +920,26 @@ def street_only(address):
     a = ' '.join(str(address).upper().replace(',', ' ').split())
     suffixes = ('AVE', 'DR', 'ST', 'RD', 'WAY', 'LN', 'CT', 'BLVD', 'PL', 'CIR', 'TER', 'PKWY', 'HWY', 'TRL')
     words = a.split()
+    units = ('APT', 'UNIT', 'STE', 'SPC', 'BLDG', 'LOT', '#')
     for i in range(len(words) - 1, -1, -1):
         if words[i] in suffixes:
-            return ' '.join(words[:i + 1])
+            keep = i + 1
+            if keep < len(words) and words[keep] in units:        # '718 N MARKET ST APT 3' keeps its unit
+                keep = min(len(words), keep + 2)
+            return ' '.join(words[:keep])
     return a
 
 
 # ------------------------------------------------------------------ job
 def build_job(spec):
     J = Job()
+    J.hmap = dict(spec.get('handle_map') or {})     # pieces whose handle differs in this template copy
+    if spec.get('rspan_h'):
+        # RULING SPAN example handles differ between template copies: [box, line1..line4] from a query of the
+        # template example at 1538.624, -807.5353 (box) in THIS drawing
+        h = spec['rspan_h']
+        RSPAN['box'] = h[0]
+        RSPAN['lines'] = [(nh, y) for nh, (_, y) in zip(h[1:], RSPAN['lines'])]
     for pole in spec['poles']:
         idx = pole['frame']
         Cx, Cy = frame(idx)
