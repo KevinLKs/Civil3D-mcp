@@ -10,7 +10,7 @@ Read when any pole has TLM data (a filled PDF TLM table, a pasted Excel snippet,
 
 ## Values
 
-- Street address only: drop city and state. Un-swap values pasted in the wrong column.
+- Street address only: drop city and state; keep a unit (`718 N MARKET ST APT 3`). A source that already lists street addresses only (TLM CUSTOMER DATA xlsx with METER/ADDRESS column pairs per pole) gets `"raw": true` so tags like `WSDR` survive. Un-swap values pasted in the wrong column.
 - STRUCTURE = pole number. EX and PR fields as written; EX-LOAD and PR-LOAD WITHOUT `%` (the block prints its own). PRI-CIRC as written (`REJADA 16KV`).
 - Always send STRUCTURE, the EX fields, CLIMATE-ZONE and PRI-CIRC (the stash holds `-` and `_______ _KV`); "" for a blank EX field.
 - Spec: `"tlm": {"ex": [size, kva, cust, load], "pr": [...], "cz", "pc", "vd", "flicker", "addr": [[address, meter], ...], "notes": [...]}`.
@@ -19,7 +19,7 @@ Read when any pole has TLM data (a filled PDF TLM table, a pasted Excel snippet,
 
 - Insertion (Cx + 777.554, Cy + 114.314). `ADDRESS LIST n` visibility, n = address count (10 max).
 - Visible table bottom: insertion y - 70.40 - (n - 5) x 11.73.
-- More than 10 addresses: block stays at LIST 10; rows 11 to 20 are burst rows copied from the row 12 set. Before generating, query window x 1850 to 2003, y -792.5 to -779.5, layer MISC, includeGeometry false, pick with `polehead.pick_tlm_extra(entities)` and set spec `"tlm_extra": [address, meter, box, line]`. Row k top = insertion y - 129.0591 - (k - 11) x 11.7326. Over 20: fill 20 and report.
+- More than 10 addresses: block stays at LIST 10; rows 11 to 20 are burst rows copied from the row 12 set. Before generating, query window x 1850 to 2003, y -792.5 to -779.5, layer MISC, includeGeometry false, pick with `polehead.pick_tlm_extra(entities)` and set spec `"tlm_extra": [address, meter, box, line]`. Row k top = insertion y - 129.0591 - (k - 11) x 11.7326. Rows keep bursting down the TLM column while the table and its TLM NOTE box stay above the frame bottom (60 rows fit with three notes; TD2486645 68718E had 60). More than fit: fill what fits and report.
 
 ## TLM NOTE box
 

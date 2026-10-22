@@ -33,11 +33,11 @@ Work straight through every pole; do NOT stop to ask. Collect problems for the f
 - A symbol not in the mapping, or unreadable: skip it, draft the rest, note it (pole, height, look).
 - A bad source (unreadable page, missing tab, contradictory TLM, a clipped snippet): skip that piece, note it.
 - CALCS content that is not a calc table: skip and note (a SOIL TYPE note is drafted, see guys-anchors.md).
-- TLM over 20 addresses: fill 20, note it.
+- TLM addresses: draft every row that fits the frame (60 with three notes); more than that: fill what fits, note it.
 - NEVER infer what the planner left out: a missing height draws as `_'`, a missing value stays blank or as written. Do not cross-reference the Station Builder or material lists to second-guess the PDF (for example IN vs EX). Planner errors are the planner's.
 - Everything else: make the most reasonable call and keep going.
 
-Final report: ONLY what Kevin must look at (skips, over-20 TLMs, questionable calls, calc math that does not add up, a calc type drafted for the first time). Not reported: suffixed tab names, a default L/N, unlabeled anchors left without callouts, Station Builder blanks left as written, a blank elevation, `_'` heights, dropped duplicate notes. Nothing of concern: say so in one line. End with the job timing.
+Final report: ONLY what Kevin must look at (skips, TLMs that did not fit, questionable calls, calc math that does not add up, a calc type drafted for the first time). Not reported: suffixed tab names, a default L/N, unlabeled anchors left without callouts, Station Builder blanks left as written, a blank elevation, `_'` heights, dropped duplicate notes. Nothing of concern: say so in one line. End with the job timing.
 
 ## Setup
 
