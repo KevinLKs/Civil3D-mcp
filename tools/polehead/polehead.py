@@ -114,6 +114,10 @@ SL_FRONT = ('2E38CF', 5264.5156, -1718.0507)   # SIDE SL (front facing street li
 SL_FRONT_HW = 3.86                              # half width of the lamp head
 SL_SIDE = ('2E38D1', 5177.3026, -1718.0507)     # SL (side street light facing right), insertion at the pole
 SL_SIDE_L = 29.06
+FHLAF_SA_PIECE = ('2E382D', 5147.4442, -1341.8281)     # SURGE ARRESTER in the FH/LA arm example
+FHLAF_CO_PIECE = ('2E382F', 5167.1696, -1341.8285)     # CUTOUT in the FH/LA arm example
+FHLAF_SA_X = 24.4618
+FHLAF_CO_X = (-19.5139, 19.5904)
 ARM_CIRC = ['2E3405', '2E3408', '2E3407', '2E3406']
 ARM_SLOT_X = [-29.7551, -12.128, 12.128, 29.7551]   # pin / circle slot offsets from the arm center
 DE1_PINS = ('2E3419', '2E3916')
@@ -403,6 +407,26 @@ def place_item(J, P, r, it, sc):
             d = SRC['dot']
             J.cp(d['h'], P + sh + ARM_SLOT_X[i] - d['px'], r - d['py'])
         a = max(sc * (sh - 35), sc * (sh + 35), 0)
+    elif t == 'fhlaf' and it.get('ends') == 'sa':
+        # FH & LA arm, SAs outboard, CUTOUTs inboard, laid out like Kevin's TD2486645 68719E correction:
+        # SAs at -/+24.4618 (the right one mirrored), CUTOUTs at -19.5139 / +19.5904 (never mirrored), and the
+        # arm's own pins / circles / slanted pins on their slots (spec pins, circ, slant), so no second XARM is drawn.
+        xa = SRC['arm']
+        J.cp(xa['h'], P - xa['px'], r - xa['py'])
+        sa, sx, sy = FHLAF_SA_PIECE
+        co, cx, cy = FHLAF_CO_PIECE
+        J.cp([sa], P - FHLAF_SA_X - sx, r - sy)
+        J.cp([sa], P + FHLAF_SA_X - sx, r - sy, mirror=P + FHLAF_SA_X)
+        J.cp([co], P + FHLAF_CO_X[0] - cx, r - cy)
+        J.cp([co], P + FHLAF_CO_X[1] - cx, r - cy)
+        slant = {int(i): d for i, d in (it.get('slant') or {}).items()}
+        hs = [ARM_PINS[i] for i in it.get('pins', []) if i not in slant] + [ARM_CIRC[i] for i in it.get('circ', [])]
+        if hs:
+            J.cp(hs, P - xa['px'], r - xa['py'])
+        for i, d in sorted(slant.items()):
+            h, ix, iy = SLANT_PIN[d]
+            J.cp([h], P + ARM_SLOT_X[i] - ix, r - iy)
+        a = 35
     elif t in ('fhlaf', 'arm2fl'):
         if it.get('slant'):
             raise ValueError('%s: slant is only supported on arm, arm2 and arm4' % t)

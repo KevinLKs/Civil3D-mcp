@@ -55,7 +55,7 @@ for `qc.py` (see below).
   - `xr`, `xl`, `xb` X COND right, left, both. COMM and CATV lines are always X CONDs; add `dot: true` to keep the SEC-MISC dot under them.
   - `dot` SEC-MISC dot alone (a bare dot with no line).
   - `sg` span guy half, `k` `R` or `L` (never mirrored or edited). `share: 1` puts it on the row of the other item at that whole foot.
-  - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm (outer CUTOUTs, inner SAs; `ends: "sa"` puts the SAs at the arm ends and the CUTOUTs inner). `arm2fl` 2/C arm with FH and LA.
+  - `arm2`, `arm4`, `armc` crossarm with 2 pins, 4 pins or 4 conductor circles. `fhlaf` front view FH/LA arm (outer CUTOUTs, inner SAs; `ends: "sa"` puts the SAs outboard at -/+24.46, right one mirrored, and the CUTOUTs inboard at -19.51 / +19.59, never mirrored; give the arm's pins on the same item with `pins`, `circ` and `slant`, never as a second `arm` item, which doubles the XARM). `arm2fl` 2/C arm with FH and LA.
   - `end: "R"` / `"L"` on any crossarm: the pole sits at the arm's right / left end (offset arm), not its center.
   - `arm` crossarm with any mix: `dots` puts SEC-MISC dots on the arm at those slots (comm/CATV seen end on); `pins` and `circ` are slot indexes 0 to 3, left to right (-29.76, -12.13, +12.13, +29.76).
   - `slant: {"<slot>": "L" | "R"}` on `arm`, `arm2` or `arm4`: that slot's pin is drawn slanted (leaning left 2E3477
