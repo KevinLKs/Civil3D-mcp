@@ -146,6 +146,7 @@ CREW = dict(box='391E85', hdr=('391E97', -129.6132), line=('391E98', -137.6402),
 NOTE = dict(box='391E86', hdr=('391EA3', -162.9075), line=('391E99', -170.9346), title='NOTE:')
 GPS = ('391E87', -263.517, 43.23)
 ELEV = ('391EA0', -283.4196, 14.90)
+ELEV_LEAD = '39AD07'               # NO-PLOT line starting at the ELEV insertion; copied with ELEV for AUD attach
 TLM = ('392289', 2350.1087, -540.1907)
 CALC_INDENT = 9.923
 TLM_W = 144.5734
@@ -681,7 +682,7 @@ def build_sheet(J, Cx, Cy, sheet):
     J.cp([GPS[0]], L - STASH_X, gy - GPS[1], edit=[dict(attributes={'LAT': gps[0], 'LONG': gps[1]})])
     ey = gy - 5 - ELEV[2]
     elev = str(sheet.get('elev', '')).upper().replace("'", '').replace('FT', '').strip()
-    J.cp([ELEV[0]], L - STASH_X, ey - ELEV[1], edit=[dict(attributes={'FOOTAGE': elev})])
+    J.cp([ELEV[0], ELEV_LEAD], L - STASH_X, ey - ELEV[1], edit=[dict(attributes={'FOOTAGE': elev})])
     if sheet.get('riser'):
         J.tag(part='riser')
         build_riser(J, L, ey, sheet)

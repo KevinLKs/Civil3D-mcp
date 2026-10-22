@@ -63,6 +63,12 @@ class GeneratorTests(unittest.TestCase):
         footage = [e for _, h, e in J.edits if h == ph.ELEV[0]]
         self.assertEqual(footage[0]['attributes']['FOOTAGE'], '821')
 
+    def test_elev_lead_line_copied_with_elev(self):
+        J = ph.Job()
+        ph.build_sheet(J, 0, 0, dict(pole='X', notes=['-A'], gps=['1', '2'], elev='821'))
+        ops = [op for _, op in J.ops if ph.ELEV[0] in op['handles']]
+        self.assertEqual(ops[0]['handles'], [ph.ELEV[0], ph.ELEV_LEAD])
+
     def test_street_only(self):
         self.assertEqual(ph.street_only('1065 Burtonwood Ave, Thousand Oaks CA'), '1065 BURTONWOOD AVE')
 
