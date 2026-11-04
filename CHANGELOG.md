@@ -2,6 +2,73 @@
 
 ## Unreleased
 
+- Two Civil 3D sessions at once: the plugin listens on 8080 and, when that is
+  taken by another Civil 3D, on the next free port (8081, 8082, ... up to 8089).
+  `CIVIL3D_MCP_PORT` (environment) sets the first port, and the `C3DMCPPORT`
+  command moves a running listener to a chosen port. The port shows in the
+  startup message, `C3DMCPSTATUS` and `civil3d_health` (`port`,
+  `activeDrawing`). Point a second MCP server at it with `CIVIL3D_PORT`.
+- `CIVIL3D_READ_ONLY=1` on an MCP server refuses every action that can change a
+  drawing or write files (create, edit, delete, manage, generate, register,
+  export, import capabilities) with `CIVIL3D.READ_ONLY`; queries, captures and
+  office-survey points/build/score still work. Meant for a server pointed at a
+  reference drawing (e.g. the drafter's finished Survey drawing).
+- `civil3d_drawing` action `set_map` (plugin method `setOnlineMap`): turns the
+  online map (Bing aerial, road, hybrid) on or off by running GEOMAP (falls
+  back to GEOMAPMODE; GEOMAPMODE alone left the view dark) and reports
+  the mode before and after. `capture_view` `map` / `mapAfter` use
+  the same path, and its result lists `mapMode` and the parameter keys the
+  plugin received.
+- `civil3d_office_survey build`: arcs with R 1000-5000 ft stay arcs when the POC
+  is more than 0.5 ft off the chord (drafters draw gentle curves as one arc);
+  only flatter or bigger ones become lines.
+- `civil3d_drawing` action `capture_view` (plugin method `captureView`): optionally
+  zoom to a window in plan view, wait for online map tiles (GEOMAP, e.g. Bing
+  aerial) to load, and save the drawing view as a PNG with its world extents
+  and ft per pixel. `mode: "screen"` (default) copies the view's pixels from the
+  screen so the online map is included; `"render"` uses CapturePreviewImage.
+  `map` / `mapAfter` (aerial, road, hybrid, off) run GEOMAP before / after the
+  capture (the drawing must be geolocated and the user signed in to Autodesk).
+- `civil3d_drawing` action `geolocate` (plugin method `geolocateDrawing`, needs
+  approval): sets the drawing's geographic location from its Civil 3D
+  coordinate system so GEOMAP works; keeps an existing location unless
+  `overwrite`.
+- Plugin builds with WinForms/System.Drawing for the PNG capture (their global
+  usings removed so Color, Point etc. stay unambiguous).
+- `civil3d_entity` query with `includeGeometry`: polyline vertices carry `bulge`
+  (tan(sweep/4), + = counterclockwise) when the segment starting there is an arc.
+- `civil3d_entity` create (and `apply` job creates): inserts take `explode: true`
+  (explode the block right after inserting it; pieces on layer 0 take the
+  insert's layer, ByBlock color becomes ByLayer) and `clipLength` (trim the
+  pieces at that distance from the insertion point along the insert's rotation).
+  Used for GUY blocks: insert at the anchor, aim at the pole, clip at the pole
+  center. Apply results list the pieces as `explodedPieces` (create index ->
+  handles).
+- `blockSource` can be a folder of one-block drawings (e.g. `C:\civ3dmcp\TOPO LW`):
+  block NAME is taken from `NAME.dwg` there, inserted as a whole drawing like
+  INSERT with a file. A .dwg blockSource also falls back to that when the
+  block is the file itself. Missing blocks are all listed before anything is
+  drawn.
+- New tool `civil3d_office_survey` (office survey engine, no plugin changes):
+  `points` returns parsed shots with LO offsets resolved and no-LO shots
+  flagged; `build` turns a plan of point numbers (strings with `{poc}` arcs,
+  block inserts rotated `curb` / `face-curb`, circles, arcs, text, DISC-OTHER
+  flags) into a `civil3d_entity apply` job file without touching the drawing;
+  `score` compares a job's polylines with a drafter's query export.
+- `civil3d_entity` action `create` (plugin method `createEntities`): draws new
+  entities in one transaction: block inserts (rotation, scale, dynamic
+  properties, attributes), polylines with per-vertex bulge, circles, arcs,
+  lines and text. Missing layers are created; missing block definitions are
+  imported from `blockSource` (a .dwg inside the import roots, existing
+  definitions are never overwritten).
+- `apply` jobs take a `creates` stage (runs first) and `blockSource`, so a whole
+  drafting job (hundreds of blocks and polylines) is one approval bound to the
+  job file's SHA-256.
+- Live redraw: `copyEntities`, `editEntities`, `createHatches` and
+  `eraseEntities` repaint the drawing between pieces (throttled to about every
+  100 ms) and show `MCP <action>: n/total` on the command line, instead of
+  everything appearing at the end. Still one transaction per call, so undo and
+  rollback on error are unchanged. Set `CIVIL3D_MCP_LIVE_REDRAW=0` to turn it off.
 - `civil3d_entity` action `edit` (and `apply` job edits): circles and arcs take
   `center` and `radius`; arcs also take `startAngleDeg` / `endAngleDeg`.
 - `tools/polehead`: riser details (`riser` spec), 4" risers by radius edit,

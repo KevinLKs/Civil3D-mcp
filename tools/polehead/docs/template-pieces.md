@@ -44,11 +44,19 @@ Read when hand-building or fixing something the generator does not place, or whe
 - Guard arm line: LINE 2E3922 (35 long, from 4767.4005, -2151.7964), centered on the pole. Comm dots on it: SEC-MISC 2A500C (3805.6404, -388.2413) under line 2A500B (y -386.763).
 - SIDE XFMR: 2E3425 at (4697.58, -1973.82), width 10.42 (insertion = box center).
 
+- 66KV (TD2536512): TRANS INS 66 leaning up 2E37A8 (right) / 2E37C0 (left), insertion (4610.268, -1841.4237) on the pole. TRANS DE 66 2E37D0 (4697.5843, -1841.4237) with X CONDs 2E37E9 right / 2E37EA left (4697.5843, -1841.4348). Side group: SIDE XARM 2E3428 (4695.0843, -1654.6283), TRANS P&I 2E3429 (4695.0843, -1657.1283), X CONDs 2E3928 / 2E3929 (4695.0842, -1669.9386). TRANS P&I on an arm: XARM 2E33E5 (row -1654.6283), P&I 2E3456, 2E3457, 2E3459, 2E3458 at the slots.
+- 115KV (TD2524712): TRANS DE 115 2E37DB (4697.5843, -1894.8266, 4.8 wide, 8 tall, centered on the insertion), X CONDs 2E37EF right / 2E37F0 left from its insertion. Kevin: on 2115931E L/E the boxes sit LEFT of the pole (edge on the pole line), not centered. Level TRANS INS 66: 2E3494 right, 2E37B8 left (4610.268, -1849.4237, 19.36 long).
+- PH & LA ARM front view (row -1291.8281, pole 5177.1994): XARM 2E3810, POTHEADs 2E381F, 2E3820, 2E3821, 2E3822, SURGE ARRESTERs 2E3823, 2E3824, 2E3825, 2E3826.
+- PT 2E33EB (4784.9005, -2038.7731, 8.29 wide centered on the insertion). Side SURGE ARRESTER 2E3870 (5258.0156, -1329.3281).
+- SOIL TYPE box (this template copy): LWPOLYLINE 394947 top-left (1346.8139, -807.5353), 53.146 x 11.846; text 394948 at (1349.6896, -815.5629).
+- XFMR BANK 2E3426 (4610.268, -1973.8214, half width 20.41). DISCONNECT ARM 2E38FB (5177.2192, -1791.1975, layer ELECTRIC, half width 34.43).
+- No RECLOSER symbol in the template.
+
 ## Sheet data stash (x 2340 to 2500, y -700 to -120)
 
 - CREW box 391E85 (top-left 2379.0399, -121.5856), header 391E97 (baseline -129.6132), line 391E98 (baseline -137.6402).
 - NOTE box 391E86 (top-left 2379.0399, -154.8799), header 391EA3 (baseline -162.9075), line 391E99 (baseline -170.9346). Text x = 2381.9156.
-- GPS 391E87 (insertion 2379.0399, -263.517; LAT, LONG). ELEV 391EA0 (insertion 2379.0399, -283.4196; FOOTAGE; colorIndex 1, keep it). ELEV lead line 39AD07 (NO-PLOT LINE, start = ELEV insertion): always copied with ELEV, same offset.
+- GPS 391E87 (insertion 2379.0399, -263.517; LAT, LONG). ELEV 391EA0 (insertion 2379.0399, -283.4196; FOOTAGE; colorIndex 1, keep it). ELEV lead line 39498C (NO-PLOT LINE, start = ELEV insertion): always copied with ELEV, same offset.
 - TLM 392289 (dynamic block, layer 0, scale 60, width 144.57, insertion 2350.1087, -540.1907). TLM NOTE box 392285, header 392287, note line 392288.
 
 ## Frames

@@ -11,7 +11,7 @@ namespace Civil3DMcpPlugin;
 /// Built for template-driven drafting where existing blocks, lines, text and
 /// leaders are copied and edited rather than drawn from scratch.
 /// </summary>
-public static class EntityCommands
+public static partial class EntityCommands
 {
   private const int DefaultQueryLimit = 500;
   private const int MaxQueryLimit = 5000;
@@ -83,9 +83,11 @@ public static class EntityCommands
     return CivilExecution.WriteAsync<object?>((doc, civilDoc, database, transaction) =>
     {
       var results = new List<Dictionary<string, object?>>();
+      var progress = new DrawProgress(doc, "copy", operations.Count);
 
       for (var index = 0; index < operations.Count; index++)
       {
+        progress.BeforePiece(index);
         if (operations[index] is not JsonObject operation)
         {
           throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Operation {index} must be an object.");
@@ -189,9 +191,11 @@ public static class EntityCommands
     return CivilExecution.WriteAsync<object?>((doc, civilDoc, database, transaction) =>
     {
       var results = new List<Dictionary<string, object?>>();
+      var progress = new DrawProgress(doc, "edit", edits.Count);
 
       for (var index = 0; index < edits.Count; index++)
       {
+        progress.BeforePiece(index);
         if (edits[index] is not JsonObject edit)
         {
           throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Edit {index} must be an object.");
@@ -466,8 +470,10 @@ public static class EntityCommands
     return CivilExecution.WriteAsync<object?>((doc, civilDoc, database, transaction) =>
     {
       var erased = new List<string>();
+      var progress = new DrawProgress(doc, "erase", handles.Count);
       foreach (var handle in handles)
       {
+        progress.BeforePiece(erased.Count);
         var entity = (Entity)transaction.GetObject(GetIdFromHandle(database, handle), OpenMode.ForWrite);
         entity.Erase();
         erased.Add(handle);
@@ -500,8 +506,10 @@ public static class EntityCommands
     return CivilExecution.WriteAsync<object?>((doc, civilDoc, database, transaction) =>
     {
       var created = new List<Dictionary<string, object?>>();
+      var progress = new DrawProgress(doc, "hatch", specs.Count);
       for (var index = 0; index < specs.Count; index++)
       {
+        progress.BeforePiece(index);
         if (specs[index] is not JsonObject spec)
         {
           throw new JsonRpcDispatchException("CIVIL3D.INVALID_INPUT", $"Hatch {index}: must be an object.");
@@ -991,7 +999,15 @@ public static class EntityCommands
           var vertices = new List<object>();
           for (var i = 0; i < Math.Min(polyline.NumberOfVertices, MaxVerticesPerEntity); i++)
           {
-            vertices.Add(P(polyline.GetPoint2dAt(i)));
+            var vertex = P(polyline.GetPoint2dAt(i));
+            // Bulge of the segment that starts here: tan(sweep/4), + = counterclockwise. Only when nonzero.
+            var bulge = polyline.GetBulgeAt(i);
+            if (Math.Abs(bulge) > 1e-9)
+            {
+              vertex["bulge"] = Math.Round(bulge, 6);
+            }
+
+            vertices.Add(vertex);
           }
           info["vertices"] = vertices;
         }

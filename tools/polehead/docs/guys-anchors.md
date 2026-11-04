@@ -9,6 +9,9 @@ Read whenever a pole has down guys, span guys or anchors (most jobs). The genera
 - Spec `guys[].an` = index into `anchors` AS LISTED (the generator never reorders).
 - After the apply, check each guy's end x against its anchor in the verify query (QC item 6).
 
+- Guys on both sides of one pole (QPs left and right, TD2524712 4032107E): anchors on the other side get `gs` in the spec; DG callouts stack per side. Lead dims stay at G - 12; the pole label stays centered on the pole and drops 12 (PROPOSED baseline G - 23.08).
+- QUEENS POST `via` indexes the spec's `qp` items AS LISTED.
+
 ## Attach rows
 
 - A DG attaches at the row of the equipment in its whole foot (DG @ 37' with a dead end at 37'6" attaches at the dead end row; DG @ 23' at the 23' COMM row); otherwise at its own scale position.
@@ -37,4 +40,4 @@ Read whenever a pole has down guys, span guys or anchors (most jobs). The genera
 
 ## SOIL TYPE
 
-- `SOIL TYPE = B` written near the anchors: copy the template SOIL TYPE box (closed DECAL LWPOLYLINE about 53.15 x 11.85 plus SIMPLEX 4.8 text; in the TD2536034 copy box 399C9C top-left 1346.8139, -807.5353, text 399C9D at 1349.6896, -815.5629) under the anchor lead dims: top 8 below the lowest anchor dim line, centered on the pole to farthest anchor span. Edit the text. Not placed by the generator: add it in the fix job.
+- `SOIL TYPE = B` written near the anchors: copy the template SOIL TYPE box (closed DECAL LWPOLYLINE about 53.15 x 11.85 plus SIMPLEX 4.8 text; in the TD2536034 copy box 399C9C top-left 1346.8139, -807.5353, text 399C9D at 1349.6896, -815.5629) under the anchor lead dims: top 8 below the lowest anchor dim line, centered on the pole to farthest anchor span, then slid away from the pole (toward the anchors) until its edge is at least 6 clear of the pole label text (centered, it sits about 0.3 from the pole number with a 5' lead; Kevin, TD2561109: moved 6 toward the anchors). Box top = lowest lead dim line y - 8 (G - 20 with one lead dim row, G - 32 with two); copy offset dy = box top - (-807.5353). Edit the text. Not placed by the generator: add it in the fix job, then check it in a screenshot.

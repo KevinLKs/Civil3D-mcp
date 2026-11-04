@@ -134,6 +134,37 @@ GALDOT = ('2A500C', 3805.6404, -386.763)          # SEC-MISC hanging under a gua
 # extent right of the pole, extent left of the pole). 'L' = left leaning PH, 'R' = right leaning PH.
 PH = {'L': (['2E3866', '2E386B', '2E386D'], 5333.5588, -1291.8281, 6.9924, 3.8930),
       'R': (['2E3811', '2E386C', '2E386E'], 5264.5156, -1291.6289, 3.8930, 6.9924)}
+# Transmission (66KV) and other Builder pieces (TD2536512, Kevin's locations). Insertions given per piece.
+INS66 = {'R': ('2E37A8', 4610.268, -1841.4237), 'L': ('2E37C0', 4610.268, -1841.4237)}   # TRANS INS 66 leaning up, 19.11 long
+INS66_L = 19.114
+DE66 = ('2E37D0', 4697.5843, -1841.4237)          # TRANS DE 66 on the pole, 4.8 square
+DE66_X = {'R': ('2E37E9', 4697.5843, -1841.4348), 'L': ('2E37EA', 4697.5843, -1841.4348)}   # X CONDs beside it
+# SIDE XARM on the pole, TRANS P&I hanging below it, X CONDs both ways from the P&I bottom (insertion P - 2.5).
+# The row is the X COND line; the box top sits 17.81 above it.
+TPI66 = (['2E3428', '2E3429', '2E3928', '2E3929'], 4697.5843, -1669.9386)
+TPI66_UP = 17.8103
+TPI66_EXT = {1: 22.5, -1: 27.5}
+TPIARM = ('2E33E5', 4610.268, -1654.6283)         # XARM for TRANS P&I hanging off an arm
+TPI_SLOT = ['2E3456', '2E3457', '2E3459', '2E3458']   # TRANS P&I at slots -29.76, -12.13, +12.13, +29.76 (arm line)
+INS66_LVL = {'R': ('2E3494', 4610.268, -1849.4237), 'L': ('2E37B8', 4610.268, -1849.4237)}   # TRANS INS 66 level
+INS66_LVL_L = 19.355
+# TRANS DE 115 (2E37DB, 4.8 wide, 8 tall, centered on its insertion) with X CONDs 2E37EF right / 2E37F0 left
+# starting at its insertion. TD2524712 2115931E L/E: Kevin, box on the LEFT of the pole (edge on the pole line).
+DE115 = ('2E37DB', 4697.5843, -1894.8266)
+DE115_X = {'R': '2E37EF', 'L': '2E37F0'}
+DE115_HW = 2.4
+# PH & LA ARM, front view: XARM + 4 POTHEADs + 4 SURGE ARRESTERs as in the template COMBINATIONS example
+PHARM = (['2E3810', '2E381F', '2E3820', '2E3821', '2E3822', '2E3823', '2E3824', '2E3825', '2E3826'], 5177.1994, -1291.8281)
+# PT (potential transformer, 2E33EB, insertion on its row, 8.29 wide centered on the insertion) with side SURGE
+# ARRESTERs (2E3870, 1.5 clear of the box like the FH/LA side group)
+PHARM_PH_R = ('2E381F', 5201.0629)    # POTHEAD right of the pole (insertion)
+PHARM_PH_L = ('2E3820', 5153.3736)    # POTHEAD left of the pole (mirrored)
+PHARM_SA = ('2E3823', 5147.4442)      # SURGE ARRESTER (symmetric)
+PT = ('2E33EB', 4784.9005, -2038.7731, 4.145)
+SA_SIDE = ('2E3870', 5258.0156, -1329.3281, 0.49)
+XBANK = ('2E3426', 4610.268, -1973.8214, 20.41)   # XFMR BANK, centered on the pole, half width
+SIDEAR = ('2E33E8', 4697.5843, -2054.8031, 3.96)   # SIDE AR (recloser), centered on the pole, half width
+DISCARM = ('2E38FB', 5177.2192, -1791.1975, 34.43)   # DISCONNECT ARM, centered on the pole, half width
 ANC_LEADER_MIN = 15.1                               # shorter and the leader arrowhead does not draw
 RISER_W = 3.4169
 COL_GAP = 5.75                                    # callout column clearance past the farthest equipment
@@ -155,7 +186,8 @@ CREW = dict(box='391E85', hdr=('391E97', -129.6132), line=('391E98', -137.6402),
 NOTE = dict(box='391E86', hdr=('391EA3', -162.9075), line=('391E99', -170.9346), title='NOTE:')
 GPS = ('391E87', -263.517, 43.23)
 ELEV = ('391EA0', -283.4196, 14.90)
-ELEV_LEAD = '39AD07'               # NO-PLOT line starting at the ELEV insertion; copied with ELEV for AUD attach
+ELEV_LEAD = '39498C'               # NO-PLOT line starting at the ELEV insertion; copied with ELEV for AUD attach
+                                   # (older template copies had 39AD07: pass spec handle_map {'39498C': '39AD07'})
 TLM = ('392289', 2350.1087, -540.1907)
 CALC_INDENT = 9.923
 TLM_W = 144.5734
@@ -168,10 +200,10 @@ FRAME_HALF_H = 702                   # frame is 1404 tall, C at its middle
 # Query this window (layers MISC) to find the row 12 pieces: TEXT starting ADDRESS (address), TEXT starting METER
 # (meter, center justified on x 1971.588), LWPOLYLINE (open box), LINE (divider). Pass them as spec 'tlm_extra'.
 TLM_EXTRA_WINDOW = dict(minX=1850, minY=-792.5, maxX=2003, maxY=-779.5)
-# RULING SPAN box (template example at 1541.4998, -817.1629, same handles in every template copy):
+# RULING SPAN box (template example at 1541.4998, -817.1629; current template handles, older copies had 3948B8..BC):
 # box, underlined header, '-FROM a TO b', ' RULING SPAN = x', ' FINAL SAG = y' (layer DECAL, SIMPLEX 4.8)
-RSPAN = dict(box='3948B8', left=1538.624, top=-807.5353, x=1541.4998,
-             lines=[('3948B9', -815.5629), ('3948BA', -825.19), ('3948BB', -833.217), ('3948BC', -841.2441)],
+RSPAN = dict(box='3948FA', left=1538.624, top=-807.5353, x=1541.4998,
+             lines=[('3948FB', -815.5629), ('3948FC', -825.19), ('3948FD', -833.217), ('3948FE', -841.2441)],
              bottom=-844.8897)
 TLMNOTE = dict(box='392285', hdr=('392287', -677.2306), line=('392288', -689.5668), x=2354.3102)
 
@@ -252,19 +284,27 @@ class Job:
 def assign_rows(items):
     """Cluster rule: lowest keeps its scale position, each next steps up 8 when crowded."""
     items.sort(key=lambda it: (ft(it['h']), it.get('o', 0)))
-    used = []
+    # each row holds its callout lines: the row's own lines stack DOWN 8 apart from the row and 'above' lines
+    # stack up, so a two line callout needs 16 to the row under it (TD2550925 1453777E: SG + COMM rows overlapped)
+    used = []                                   # (lowest line, highest line) offsets in row units
     for it in items:
         if it.get('share'):
             continue
+        nc = max(1, len(it.get('c', [])))
+        na = len(it.get('above', []))
         y = pos(ft(it['h']))
-        while any(abs(y - u) < 8 for u in used):
+        while any(y - 8 * (nc - 1) - hi < 8 and lo - (y + 8 * na) < 8 for lo, hi in used):
             y += 8
         it['row'] = y
-        used.append(y)
+        used.append((y - 8 * (nc - 1), y + 8 * na))
     for it in items:
         if it.get('share'):
-            it['row'] = next(o['row'] for o in items
-                             if o is not it and not o.get('share') and int(ft(o['h'])) == int(ft(it['h'])))
+            # the host with the exact same height first (two hosts in one whole foot, 21' and 21'6" each with
+            # a span guy, TD2550925 1453777E), else the one in the same whole foot
+            hosts = [o for o in items if o is not it and not o.get('share')]
+            host = next((o for o in hosts if ft(o['h']) == ft(it['h'])), None) or \
+                next(o for o in hosts if int(ft(o['h'])) == int(ft(it['h'])))
+            it['row'] = host['row']
 
 
 CUTOUT_SIDE = ('2E3872', 5267.7315)                # side view CUTOUT (S), insertion = center, P + 3.2159 in the Builder
@@ -279,6 +319,17 @@ def cp_fhla(J, P, r, handles, cutout_left, left_edge=None):
     J.cp(rest, P - src['px'], r - src['py'], mirror=P if cutout_left else None)
     cx = (P if left_edge is None else left_edge) - 3.3132 if cutout_left else P + 3.2159
     J.cp([CUTOUT_SIDE[0]], cx - CUTOUT_SIDE[1], r - src['py'])
+
+
+def cp_arm_fhx(J, P, r, it):
+    """Front view CUTOUTs ('co') and SURGE ARRESTERs ('sa') at any offsets from the pole on an arm (a 3 phase
+    FH & LA arm drawn S-SA per phase, TD2536512). Insertion = center, on the arm line."""
+    sa, sx, sy = FHLAF_SA_PIECE
+    co, cx, cy = FHLAF_CO_PIECE
+    for ox in it.get('co', []):
+        J.cp([co], P + ox - cx, r - cy)
+    for ox in it.get('sa', []):
+        J.cp([sa], P + ox - sx, r - sy)
 
 
 def place_item(J, P, r, it, sc):
@@ -316,13 +367,15 @@ def place_item(J, P, r, it, sc):
     elif t in ('xr', 'xl', 'xb'):
         # a centered side box (comm arm) on the X COND's side: the X COND starts at the box's outer edge (P +/- 5),
         # not at the pole (Kevin's TD2486645 659344E 21'6" correction). A box sitting on the line (boxup) does not.
-        bside = {'R': 1, 'L': -1}.get(it.get('box')) if not it.get('boxup') else None
+        # box 'B' = a box each side; boxdn: box hangs under the line (top on the row), X CONDs from the pole
+        # (Kevin's TD2524712 2115930E 21' fix)
+        bsides = [] if (it.get('boxup') or it.get('boxdn')) else {'R': [1], 'L': [-1], 'B': [1, -1]}.get(it.get('box'), [])
         for d in {'xr': ['xr'], 'xl': ['xl'], 'xb': ['xr', 'xl']}[t]:
             src = SRC[d]
             dd = 1 if d == 'xr' else -1
-            J.cp(src['h'], P + (5 * dd if bside == dd else 0) - src['px'], r - src['py'])
+            J.cp(src['h'], P + (5 * dd if dd in bsides else 0) - src['px'], r - src['py'])
         dirs = {'xr': [1], 'xl': [-1], 'xb': [1, -1]}[t]
-        a = (30 if bside == sc else 25) if sc in dirs else 0
+        a = (30 if sc in bsides else 25) if sc in dirs else 0
     elif t == 'rcs':
         # RCS CONTROL BOX: the oddly shaped template rectangle 2E3432 (6.5467 x 8.746), centered on its row, edge on
         # the pole line on the side the PDF draws it (k 'L' or 'R'). Plain polyline, so mirroring would also be fine.
@@ -344,7 +397,10 @@ def place_item(J, P, r, it, sc):
         J.cp([GALINE[0]], min(P, x1) - GALINE[1], r - GALINE[2],
              edit=[dict(start=pt(min(P, x1), r), end=pt(max(P, x1), r))])
         dsrc = SRC['dot']
-        J.cp(dsrc['h'], x1 - dsrc['px'], r - dsrc['py'])
+        # dots: SEC-MISC dots ON the arm at these distances from the pole (toward k) instead of the one end dot,
+        # e.g. an ALLEY ARM with three comm dots short of its end (TD2550925 4611191E)
+        for ox in it.get('dots') or [L]:
+            J.cp(dsrc['h'], (P + d * float(ox)) - dsrc['px'], r - dsrc['py'])
         a = L if d == sc else 0
     elif t == 'ph':
         # PH & LA: copy the template example group as is, k 'L' (left leaning PH) or 'R' (right leaning PH)
@@ -360,6 +416,85 @@ def place_item(J, P, r, it, sc):
         else:
             J.cp([SL_SIDE[0]], P - SL_SIDE[1], r - SL_SIDE[2], mirror=P if k == 'L' else None)
             a = SL_SIDE_L if (1 if k == 'R' else -1) == sc else 0
+    elif t == 'ins66':
+        # TRANS INS 66 leaning up from the pole: k 'L', 'R' or 'LR' (one each way); lvl: true = level (Angle1 0)
+        lib, ln = (INS66_LVL, INS66_LVL_L) if it.get('lvl') else (INS66, INS66_L)
+        for d in k:
+            h, ix, iy = lib[d]
+            J.cp([h], P - ix, r - iy)
+        a = ln if ('R' if sc > 0 else 'L') in k else 0
+    elif t == 'de115':
+        # TRANS DE 115: k 'L' box left of the pole (edge on the pole line), 'R' right, 'C' centered as in the
+        # template. xc: X CONDs from the box center, 'B', 'R', 'L' or '' (none, the default: drawn only when the PDF does)
+        bx = P + {'L': -DE115_HW, 'R': DE115_HW, 'C': 0}[k]
+        J.cp([DE115[0]], bx - DE115[1], r - DE115[2])
+        xc = it.get('xc', '')
+        dirs = 'RL' if xc == 'B' else xc
+        for d in dirs:
+            J.cp([DE115_X[d]], bx - DE115[1], r - DE115[2])
+        a = max(sc * (bx - P - DE115_HW), sc * (bx - P + DE115_HW), 0)
+        if ('R' if sc > 0 else 'L') in dirs:
+            a = max(a, sc * (bx - P) + 25)
+    elif t == 'pharm':
+        # PH & LA ARM front view: the template group as is, centered on the pole
+        hs, px, py = PHARM
+        if it.get('ph') is None and it.get('sa') is None:
+            J.cp(hs, P - px, r - py)
+        else:
+            # PHs and SAs where the PDF draws them (offsets from the pole); a PH left of the pole is the mirrored one
+            J.cp([hs[0]], P - px, r - py)
+            for ox in it.get('ph', []):
+                h, ix = (PHARM_PH_L if ox < 0 else PHARM_PH_R)
+                J.cp([h], P + ox - ix, r - py)
+            for ox in it.get('sa', []):
+                J.cp([PHARM_SA[0]], P + ox - PHARM_SA[1], r - py)
+        a = 35
+    elif t == 'pt':
+        # PT & LA: PT box beside the pole on the k side (edge on the pole line; 'C' centered), la: true adds a
+        # SURGE ARRESTER 1.5 clear of each side of the box
+        h, ix, iy, hw = PT
+        cx = P + {'L': -hw, 'R': hw, 'C': 0}[k]
+        J.cp([h], cx - ix, r - iy)
+        ext = [cx - hw, cx + hw]
+        if it.get('la'):
+            sh, sx, sy, shw = SA_SIDE
+            for d in (-1, 1):
+                ox = cx + d * (hw + 1.5)
+                J.cp([sh], ox - sx, r - sy)
+                ext.append(ox + d * shw)
+        a = max([sc * (x - P) for x in ext] + [0])
+    elif t == 'de66':
+        # TRANS DE 66 on the pole with X CONDs: k 'B' both ways (default), 'R' or 'L'
+        J.cp([DE66[0]], P - DE66[1], r - DE66[2])
+        dirs = 'RL' if k in ('B', 'C') else k
+        for d in dirs:
+            h, ix, iy = DE66_X[d]
+            J.cp([h], P - ix, r - DE66[2])
+        a = 25 if ('R' if sc > 0 else 'L') in dirs else 2.4
+    elif t == 'tpi66':
+        # SIDE XARM on the pole with a TRANS P&I hanging below and X CONDs both ways (template group as is)
+        # k 'R': the group mirrored about the pole (box right of the pole, P&I and X CONDs from P + 2.5)
+        hs, ix, iy = TPI66
+        J.cp(hs, P - ix, r - iy, mirror=P if k == 'R' else None)
+        a = TPI66_EXT[-sc if k == 'R' else sc]
+        it['up'] = TPI66_UP
+    elif t == 'tpiarm':
+        # XARM with TRANS P&I hanging at the slots in 'pins' (0..3)
+        h, ix, iy = TPIARM
+        J.cp([h] + [TPI_SLOT[i] for i in it.get('pins', [])], P - ix, r - iy)
+        a = 35
+    elif t == 'xbank':
+        h, ix, iy, hw = XBANK
+        J.cp([h], P - ix, r - iy)
+        a = hw
+    elif t == 'ar':
+        h, ix, iy, hw = SIDEAR
+        J.cp([h], P - ix, r - iy)
+        a = hw
+    elif t == 'disc':
+        h, ix, iy, hw = DISCARM
+        J.cp([h], P - ix, r - iy)
+        a = hw
     elif t in ('dot', 'none'):
         pass                                               # dot: handled below; none: only a 'box' (guard arm, comm box)
     elif t == 'riser':
@@ -379,8 +514,9 @@ def place_item(J, P, r, it, sc):
     elif t == 'sg':
         d = 1 if k == 'R' else -1
         src = SRC['sg_r' if d > 0 else 'sg_l']
-        J.cp(src['h'], P - src['px'], r - src['py'])       # never mirrored, never edited
-        a = SG_LEN if d == sc else 0
+        off = it.get('off', 0)                             # starts at a box edge (P +/- 5) when the row has a box there
+        J.cp(src['h'], P + d * off - src['px'], r - src['py'])       # never mirrored, never edited
+        a = SG_LEN + off if d == sc else 0
     elif t == 'armc' and it.get('slant'):
         raise ValueError('armc has conductor circles, no pins to slant; use arm with pins and slant')
     elif t in ('arm2', 'arm4') and it.get('slant'):
@@ -408,6 +544,9 @@ def place_item(J, P, r, it, sc):
             J.cp([h], P + sh + ARM_SLOT_X[i] - ix, r - iy)
         for ox in it.get('pinx', []):                  # pins at any offset from the pole, e.g. a 3/C secondary
             J.cp([ARM_PINS[0]], P + sh + ox - (src['px'] + ARM_SLOT_X[0]), r - src['py'])   # drawn right of the pole
+        for ox in it.get('circx', []):                 # conductor circles at any offset (pins drawn off the slots)
+            J.cp([ARM_CIRC[0]], P + sh + ox - (src['px'] + ARM_SLOT_X[0]), r - src['py'])
+        cp_arm_fhx(J, P + sh, r, it)
         for i in it.get('dots', []):                   # SEC-MISC dots on the arm (comm / CATV seen end on)
             d = SRC['dot']
             J.cp(d['h'], P + sh + ARM_SLOT_X[i] - d['px'], r - d['py'])
@@ -443,18 +582,44 @@ def place_item(J, P, r, it, sc):
         a = 35
     elif t in ('de1', 'de2'):
         src = SRC['de1']
-        hs = src['h'] + (SRC['de2x']['h'] if t == 'de2' else [])
-        if it.get('nopins'):
-            hs = [h for h in hs if h not in DE1_PINS]
-        J.cp(hs, P - src['px'], r - src['py'], mirror=P if k == 'L' else None)
-        dirs = [1, -1] if t == 'de2' else ([-1] if k == 'L' else [1])
-        a = 30 if sc in dirs else 5
-        if it.get('top'):
+        ob = it.get('onebox') if t == 'de2' else None
+        if ob in ('L', 'R'):
+            # dead end both ways on ONE box (Kevin's TD2524712 2115929E 36'6" fix): the box and pin on the ob side
+            # with its ticks and X COND as usual; the other side's ticks and X COND slide 5 toward the pole
+            # (ticks from P + 2, X COND from the pole), no box or pin there
+            left = ['2E3415', '2E3419', '2E3490', '2E3418', '2E3417', '2E3416']
+            right = ['2E3912', '2E3916', '2E3913', '2E3914', '2E3915', '2E3918']
+            near, far = (left, right) if ob == 'L' else (right, left)
+            if it.get('nopins'):
+                near = [h for h in near if h not in DE1_PINS]
+            J.cp(near, P - src['px'], r - src['py'])
+            J.cp(far[2:], P - src['px'] + (-5 if ob == 'L' else 5), r - src['py'])
+            a = 30 if (sc < 0) == (ob == 'L') else 25
+        else:
+            hs = src['h'] + (SRC['de2x']['h'] if t == 'de2' else [])
+            if it.get('nopins'):
+                hs = [h for h in hs if h not in DE1_PINS]
+            J.cp(hs, P - src['px'], r - src['py'], mirror=P if k == 'L' else None)
+            dirs = [1, -1] if t == 'de2' else ([-1] if k == 'L' else [1])
+            a = 30 if sc in dirs else 5
+        if it.get('top') and ob in ('L', 'R'):
+            # both arrows from the one pin top
+            yt = r + 2.5 + 4.4648
+            px_ = P + (-2.5 if ob == 'L' else 2.5)
+            J.cp(['2E348D'], px_ - 4697.5843, yt - (-1389.6635))
+            J.cp(['2E3492'], px_ - 4697.5843, yt - (-1389.6635))
+        elif it.get('top'):
             # X COND both ways from the pin tops as well (a run over the dead end): right from the right pin
             # (P + 2.5), left from the left pin (P - 2.5), at pin insertion + 4.4648 like the primary box group
             yt = r + 2.5 + 4.4648
             J.cp(['2E348D'], (P + 2.5) - 4697.5843, yt - (-1389.6635))
             J.cp(['2E3492'], (P - 2.5) - 4697.5843, yt - (-1389.6635))
+        if it.get('omni') in ('L', 'R'):
+            # INV OMNI CLOSED beside the dead end box on that side: insertion 5 beyond the box's SIDE XARM insertion
+            # (P +/- 2.5), on the row; template leans left, omni_lean 'R' mirrors it
+            d = 1 if it['omni'] == 'R' else -1
+            ox = P + d * 7.5
+            J.cp(['2E344E'], ox - 4580.5129, r - (-1596.6283), mirror=ox if it.get('omni_lean') == 'R' else None)
         if it.get('fhla'):
             # SA + CUTOUT on the dead end boxes; fhla 'R' = cutout left, SA right (mirrored)
             cp_fhla(J, P, r, SRC['fhla_on_box']['h'], it['fhla'] == 'R', left_edge=P - 5)   # dead end boxes P - 5 to P + 5
@@ -466,9 +631,10 @@ def place_item(J, P, r, it, sc):
         # at the box center height (template example: omni 4690.0843 and box 4695.0843, both at -1596.6283).
         src = SRC['sbox']
         # boxup: the PDF draws the box sitting ON the line (bottom on the row, edge on the pole), not centered
-        by = r - 2.5 if it.get('omni') else (r + 2.5 if it.get('boxup') else r)
-        J.cp(src['h'], P - src['px'], by - src['py'], mirror=P if it['box'] == 'L' else None)
-        if (1 if it['box'] == 'R' else -1) == sc:
+        by = r - 2.5 if (it.get('omni') or it.get('boxdn')) else (r + 2.5 if it.get('boxup') else r)
+        for bs in (['R', 'L'] if it['box'] == 'B' else [it['box']]):
+            J.cp(src['h'], P - src['px'], by - src['py'], mirror=P if bs == 'L' else None)
+        if it['box'] == 'B' or (1 if it['box'] == 'R' else -1) == sc:
             a = max(a, 5)
         if it.get('omni'):
             # INV OMNI CLOSED (2E344E, template orientation): insertion exactly 5 beside the SIDE XARM insertion
@@ -491,26 +657,45 @@ def place_item(J, P, r, it, sc):
 def build_pole(J, P, G, spec):
     sc = 1 if spec['side'] == 'R' else -1
     items = spec['items']
+    lbl_drop = 0
+    # guys[].via indexes the QUEENS POSTs AS LISTED in the spec (assign_rows sorts items by height in place)
+    qps_listed = [it for it in items if it['t'] == 'qp']
     assign_rows(items)
+    for it in items:
+        # a span guy sharing a row whose X COND item has a box on the span guy's side starts at the box edge
+        # (Kevin's TD2524712 2115931E L/E 24' fix)
+        if it['t'] == 'sg' and it.get('share') and 'off' not in it:
+            host = next((o for o in items if o is not it and not o.get('share') and o['row'] == it['row']), None)
+            if host and not host.get('boxup') and not host.get('boxdn') and host.get('box') in ('B', it.get('k', 'C')):
+                it['off'] = 5
     anchors = spec.get('anchors', [])
     gs = spec.get('gside', 0)
     if anchors:
         if gs == 0:
             raise ValueError('pole %s: anchors need gside +1 or -1' % spec.get('num'))
-        short = min(int(ft(a['L'])) for a in anchors)
+        # an anchor may carry its own 'gs' (guys on both sides of the pole, TD2524712 4032107E L/E); the scale
+        # runs from the shortest lead on each side
         for a in anchors:
-            a['x'] = P + gs * (anchor_base(short) + 4 * (int(ft(a['L'])) - short))
+            a['gs'] = a.get('gs', gs)
+        short = {d: min([int(ft(a['L'])) for a in anchors if a['gs'] == d] or [0]) for d in (1, -1)}
+        for a in anchors:
+            d = a['gs']
+            a['x'] = P + d * (anchor_base(short[d]) + 4 * (int(ft(a['L'])) - short[d]))
     for it in items:
         if it['t'] == 'qp':     # QP length = its anchor's distance unless the planner gives its own 'L'
-            it['qx'] = (P + gs * (anchor_base(short) + 4 * (int(ft(it['L'])) - short))) if it.get('L') \
-                else anchors[it.get('an', 0)]['x']
+            if it.get('L'):
+                d = it.get('gs', gs)
+                sh = short[d] or int(ft(it['L']))
+                it['qx'] = P + d * (anchor_base(sh) + 4 * (int(ft(it['L'])) - sh))
+            else:
+                it['qx'] = anchors[it.get('an', 0)]['x']
     J.tag(part='equip', P=P, G=G, side=spec['side'], gside=spec.get('gside', 0))
     top = 0
     texts = []           # callout text boxes (x0, x1, baseline)
     for it in items:
         it['G'] = G
         it['a'] = place_item(J, P, G + it['row'], it, sc)
-        top = max(top, it['row'])
+        top = max(top, it['row'] + it.get('up', 0))
     for it in items:
         # a shared item (the other SG half) sticking out further on the dim side: the row's dim ends at its tip
         if it.get('share'):
@@ -538,8 +723,9 @@ def build_pole(J, P, G, spec):
 
     # anchors decide the base line
     if anchors:
-        fx = max(abs(a['x'] - P) for a in anchors) + 2
-        b0, b1 = (P - 17.5, P + fx) if gs > 0 else (P - fx, P + 17.5)
+        fr = max([a['x'] - P + 2 for a in anchors if a['gs'] > 0] or [17.5])
+        fl = max([P - a['x'] + 2 for a in anchors if a['gs'] < 0] or [17.5])
+        b0, b1 = P - fl, P + fr
     else:
         b0, b1 = P - 17.5, P + 17.5
     J.cp([LINE[0]], P - LINE[1], G - LINE[2], edit=[dict(start=pt(b0, G), end=pt(b1, G))])
@@ -573,17 +759,25 @@ def build_pole(J, P, G, spec):
     if anchors:
         J.tag(part='anchor')
         # guys[].an and qp 'an' index the anchors AS LISTED in the spec; never sort the list itself
-        by_dist = sorted(anchors, key=lambda a: abs(a['x'] - P))
-        for i, a in enumerate(by_dist):
+        sides = sorted(set(a['gs'] for a in anchors), reverse=True)
+        both = len(sides) == 2
+        # guys on both sides: lead dims stay 12 below the ground line as usual and the pole label (centered on the
+        # pole) drops 12 per lead dim row below them (Kevin's TD2524712 4032107E L/E correction)
+        ddrop = 0
+        if both:
+            lbl_drop = 12 * max(sum(1 for a in anchors if a['gs'] == d) for d in sides)
+        for d in sides:
+          by_dist = sorted([a for a in anchors if a['gs'] == d], key=lambda a: abs(a['x'] - P))
+          for i, a in enumerate(by_dist):
             J.cp([ARC[0]], a['x'] - ARC[1], G + 2 - ARC[2])
             J.cp([LDIM[0]], P - LDIM[1], G - LDIM[2], edit=[dict(
-                xLine1=pt(a['x'], G), xLine2=pt(P, G), dimLine=pt(P, G - 12 * (i + 1)),
+                xLine1=pt(a['x'], G), xLine2=pt(P, G), dimLine=pt(P, G - ddrop - 12 * (i + 1)),
                 text=a['L'].replace(' ', ''), layer='DIMENSION', colorIndex=256)])
         rowof, exact = {}, {}
         for it in items:
             rowof.setdefault(int(ft(it['h'])), it['row'])
             exact.setdefault(ft(it['h']), it['row'])
-        qps = [it for it in items if it['t'] == 'qp']
+        qps = qps_listed
         guys = spec.get('guys', [])
         J.tag(part='guy')
         for g in guys:
@@ -609,17 +803,80 @@ def build_pole(J, P, G, spec):
                 return qx + (g['ax'] - qx) * (qy - y) / (qy - G)
             return P + (g['ax'] - P) * (g['ya'] - y) / (g['ya'] - G)
 
-        gl = sorted(guys, key=lambda g: -g['ya'])
-        last = None
-        for g in gl:
+        for g in guys:
+            g['gs'] = anchors[g['an']]['gs']
+        gi = 0
+        for gs in sides:                             # DG callouts and anchor labels, one guy side at a time
+          sg_ = [g for g in guys if g['gs'] == gs]
+          gl = sorted([g for g in sg_ if g.get('c')], key=lambda g: -g['ya'])
+          last = None
+          for g in gl:
             g['yt'] = g['ya'] - 28 if last is None else min(g['ya'] - 28, last - 30)
             last = g['yt']
-        lift = max(0, (G + 20) - last) if gl else 0
-        for gi, g in enumerate(gl):
+          lift = max(0, (G + 20) - last) if gl else 0
+
+          def dg_x(g, yt):
+              near = max([gs * (gx(o, yt + 3) - P) for o in sg_ if o['ya'] > yt] or [0]) + 20
+              nx = P + gs * near
+              return nx, nx + gs * len(g['c']) * 3.9
+
+          def on_callout(g, yt):
+              # a DG callout landing on equipment callout text on its side (QP callouts, TD2524712 4032107E)
+              a0, a1 = sorted(dg_x(g, yt))
+              return any(a1 > min(t0, t1) - 1 and a0 < max(t0, t1) + 1 and yt < yb + TEXT_H + 1 and yt + TEXT_H + 1 > yb
+                         for (t0, t1, yb) in texts)
+          def leader_hits(g, yt):
+              nx, _ = dg_x(g, yt)
+              elb = nx - gs * 5.8
+              ay = min(yt + 11, g['ya'] - 4)
+              if 'q' in g:
+                  ay = max(ay, g['q'][1] + 4)
+              x0_, y0_ = gx(g, ay), ay
+              for k_ in range(1, 20):
+                  x = x0_ + (elb - x0_) * k_ / 20
+                  y = y0_ + (yt + 3 - y0_) * k_ / 20
+                  for (t0, t1, yb) in texts:
+                      if min(t0, t1) - 0.5 < x < max(t0, t1) + 0.5 and yb - 0.5 < y < yb + TEXT_H + 0.5:
+                          return True
+              return False
+
+          def stack(first):
+              last, out = None, []
+              for g in gl:
+                  yt = g['ya'] - first if last is None else min(g['ya'] - 28, last - 30)
+                  if on_callout(g, yt) or leader_hits(g, yt):
+                      # nearest clear spot: down up to 40, or up while it stays 30 under the one above and 8 under its attach
+                      top_ = min(g['ya'] - 8, (last - 30) if last is not None else g['ya'] - 8)
+                      cands = sorted([yt - d for d in range(1, 41)] + [yt + d for d in range(1, int(top_ - yt) + 1)],
+                                     key=lambda y: abs(y - yt))
+                      yt = next((y for y in cands if not on_callout(g, y) and not leader_hits(g, y)),
+                                next((y for y in cands if not on_callout(g, y)), yt))
+                  out.append(yt)
+                  last = yt
+              lf = max(0, (G + 20) - last)
+              bad = sum(on_callout(g, y + lf) + leader_hits(g, y + lf) for g, y in zip(gl, out))
+              return bad, out, lf
+          if gl and any(on_callout(g, g['yt'] + lift) or leader_hits(g, g['yt'] + lift) for g in gl):
+              # restack: each callout steps down until it clears the equipment callout text; when a leader would
+              # still cross callout text, raise the first callout (attach - 28 up to attach - 8) and try again
+              best = None
+              for first in range(28, 7, -2):
+                  bad, out, lf = stack(first)
+                  if best is None or bad < best[0]:
+                      best = (bad, out, lf)
+                  if bad == 0:
+                      break
+              bad, out, lift = best
+              for g, y in zip(gl, out):
+                  g['yt'] = y
+              for g in gl:
+                  if on_callout(g, g['yt'] + lift) or leader_hits(g, g['yt'] + lift):
+                      J.report.append('%s: DG callout %s sits on or leads through callout text; move it by hand' % (spec.get('num'), g['c']))
+          for g in gl:
             J.tag(part='dg', dg=gi)
+            gi += 1
             yt = g['yt'] + lift
-            near = max([gs * (gx(o, yt + 3) - P) for o in guys if o['ya'] > yt] or [0]) + 20
-            nx = P + gs * near
+            nx, _ = dg_x(g, yt)
             txt = g['c']
             right = nx + len(txt) * 3.9 if gs > 0 else nx
             J.cp([DGTXT[0]], right - DGTXT[1], yt - DGTXT[2], edit=[dict(text=txt, colorIndex=color_for(txt))])
@@ -630,13 +887,14 @@ def build_pole(J, P, G, spec):
                 ay = max(ay, g['q'][1] + 4)          # arrow on the upper run, above the QP
             J.cp([LEADER[0]], P - LEADER[1], yt - LEADER[2], edit=[dict(
                 vertices=[pt(gx(g, ay), ay), pt(elb, yt + 3), pt(endx, yt + 3)])])
-        J.tag(part='anclabel')
-        far_a = by_dist[-1]
-        # far anchor's label at ground, then the others from the farthest up to the nearest, so leaders never cross
-        lab = sorted([a for a in by_dist if a.get('c')], key=lambda a: (0, 0) if a is far_a else (1, -abs(a['x'] - P)))
-        lx = far_a['x'] + gs * 6
-        ybs, prev = [], None
-        for a in lab:
+          J.tag(part='anclabel')
+          by_dist = sorted([a for a in anchors if a['gs'] == gs], key=lambda a: abs(a['x'] - P))
+          far_a = by_dist[-1]
+          # far anchor's label at ground, then the others from the farthest up to the nearest, so leaders never cross
+          lab = sorted([a for a in by_dist if a.get('c')], key=lambda a: (0, 0) if a is far_a else (1, -abs(a['x'] - P)))
+          lx = far_a['x'] + gs * 6
+          ybs, prev = [], None
+          for a in lab:
             yb = G + 1.6 if prev is None else prev + 8
             if a is not far_a:
                 # leader arrow segment (anchor to elbow) at least ANC_LEADER_MIN long, or the arrowhead does not draw
@@ -645,7 +903,7 @@ def build_pole(J, P, G, spec):
                     yb += 4
             ybs.append(yb)
             prev = yb
-        for i, a in enumerate(lab):
+          for i, a in enumerate(lab):
             yb = ybs[i]
             J.cp([ANCTXT[0]], lx - ANCTXT[1], yb - ANCTXT[2], mirror=lx if gs < 0 else None,
                  edit=[dict(text=a['c'], colorIndex=color_for(a['c']))])
@@ -653,12 +911,13 @@ def build_pole(J, P, G, spec):
                 ex = lx - gs * 2.8
                 J.cp([LEADER[0]], P - LEADER[1], G - LEADER[2], edit=[dict(
                     vertices=[pt(a['x'] + gs * 1.2, G + 1.5), pt(ex - gs * 3, yb + 3), pt(ex, yb + 3)])])
+        gs = 0 if both else sides[0]
 
     # pole label
     J.tag(part='label')
     cx = P if gs == 0 else (P + 9.9 + 15.55 if gs < 0 else P - 9.86 - 15.55)
     for k, ((h, sx, sy), t) in enumerate(zip(LBL, ['PROPOSED', spec['L'], spec['num']])):
-        J.cp([h], cx - sx, (G - 11.08 - 8 * k) - sy, edit=[dict(text=t)] if k else None)
+        J.cp([h], cx - sx, (G - lbl_drop - 11.08 - 8 * k) - sy, edit=[dict(text=t)] if k else None)
     return top
 
 
@@ -752,7 +1011,7 @@ def build_sheet(J, Cx, Cy, sheet):
         # 'raw': the source already lists street addresses only (unit tags like WSDR kept as written)
         addr = [[' '.join(str(a).upper().split()) if tlm.get('raw') else street_only(a), m] for a, m in tlm.get('addr', [])]
         # burst rows run down the TLM column until the table plus its TLM NOTE box would cross the frame bottom
-        nn = len(tlm.get('notes') or [])
+        nn = len(wrap_tlm_notes(tlm.get('notes')))
         fit = tlm_fit(Cy + 114.314, Cy - FRAME_HALF_H + 5, nn)
         if len(addr) > fit:
             J.report.append('%s: %d TLM addresses, only the first %d fit in the frame; needs guidance' % (sheet['pole'], len(addr), fit))
@@ -773,7 +1032,7 @@ def build_sheet(J, Cx, Cy, sheet):
         if len(addr) > 10 and not sheet.get('tlm_extra'):
             J.report.append('%s: no tlm_extra handles in the spec; using the TD2536012 handles' % sheet['pole'])
         tlm_extra_rows(J, ix, iy, addr[10:], sheet.get('tlm_extra'))
-        notes = tlm.get('notes') or []
+        notes = wrap_tlm_notes(tlm.get('notes'))
         J.tag(part='tlmnote')
         if notes:
             # box directly under the visible table; same x span as the block
@@ -970,6 +1229,26 @@ def tlm_extra_rows(J, ix, iy, extra, handles=None):
     for j, (a, m) in enumerate(extra):
         top = iy - TLM_L10_BOTTOM - j * TLM_ROW
         J.cp(src['h'], ix - src['left'], top - src['top'], edit=[dict(text=a), dict(text=m)])
+
+
+TLM_NOTE_WRAP = 38                   # TLM NOTE lines wrap past about 38 characters (box is TLM_W wide)
+
+
+def wrap_tlm_notes(notes):
+    """TLM NOTE lines as drawn: each note wrapped at word breaks to at most TLM_NOTE_WRAP characters
+    (TD2536537: 'XFMR BEING REPLACED DUE TO FR3 REQUIREMENTS' ran past the box)."""
+    out = []
+    for n in notes or []:
+        line = ''
+        for w in str(n).split():
+            if line and len(line) + 1 + len(w) > TLM_NOTE_WRAP:
+                out.append(line)
+                line = w
+            else:
+                line = (line + ' ' + w) if line else w
+        if line:
+            out.append(line)
+    return out
 
 
 def street_only(address):

@@ -81,6 +81,8 @@ for `qc.py` (see below).
   - `rcs` RCS CONTROL BOX: template rectangle 2E3432 centered on its row, `k` `L`/`R` beside the pole (never mirrored).
   - `arm1` short one-sided arm (COMM ARM drawn as a short line out from the pole with a dot at its end): the guard
     arm line 2E3922 cut to `L` (default 17.5) toward `k` (`L`/`R`), SEC-MISC dot on the far end. Not an X COND.
+    `dots: [3.9, 9.05, 13.9]` puts the SEC-MISC dots ON the arm at those distances from the pole instead of the end dot
+    (an ALLEY ARM with three comm dots, TD2550925 4611191E).
   - `gal` guard arm drawn as a line through the pole: the 35 long line 2E3922 centered on the pole. `dots: [4.5, 10, 15.5]`
     hangs SEC-MISC dots (template 2A500C) under the line at those offsets from the pole (comm on a guard arm).
   - `ph` PH & LA (pothead): the template example group copied as is, `k: "L"` left leaning PH (box right of the
@@ -88,16 +90,49 @@ for `qc.py` (see below).
   - `top: true` on `de1`/`de2`: X CONDs both ways from the pin tops too, when the PDF draws arrows over the dead end pins.
   - `riser` TOR: riser box (2A4127) from the ground to its row, `k` `C` centered on the pole (pole runs through it), `R`/`L` beside it. Callout `TOR`.
   - `qp` QUEENS POST: a line at its row from the pole out to its anchor's distance (`an`, or its own `L`). Guys with
-    `via: <qp index>` run from the pole to the QP end; one more guy runs from the QP end down to the anchor.
+    `via: <qp index>` (index among the spec's `qp` items AS LISTED) run from the pole to the QP end; one more guy runs from the QP end down to the anchor.
     Callout text `QUEENS POST`.
+  - `ins66` TRANS INS 66 leaning up from the pole (2E37A8 right, 2E37C0 left, 19.11 long), `k` `L`, `R` or `LR`.
+  - `de66` TRANS DE 66 (2E37D0) on the pole with X CONDs (2E37E9 / 2E37EA), `k` `B` (default), `R` or `L`.
+  - `tpi66` SIDE XARM on the pole with a TRANS P&I hanging below and X CONDs both ways from its bottom (template
+    group 2E3428, 2E3429, 2E3928, 2E3929 as is). The row is the X COND line; the pole line runs up to the box top.
+  - `tpiarm` XARM (2E33E5) with TRANS P&I hanging at the slots in `pins` (2E3456, 2E3457, 2E3459, 2E3458).
+  - `ar` SIDE AR (recloser, 2E33E8) centered on the pole. `tpi66` `k: "R"` mirrors the group to the right of the pole.
+  - `de115` TRANS DE 115 (2E37DB, 4.8 x 8): `k: "L"` box left of the pole with its edge on the pole line (TD2524712
+    2115931E L/E, Kevin), `"R"` right, `"C"` centered as in the template. `xc`: X CONDs from the box center, `"B"`, `"R"`,
+    `"L"`, or none (default; draw them only when the PDF does).
+  - `ins66` with `lvl: true`: the level TRANS INS 66 pair (2E3494 right, 2E37B8 left) instead of the leaning up one.
+  - `pharm` PH & LA ARM front view: the COMBINATIONS example group (XARM 2E3810, 4 POTHEADs, 4 SURGE ARRESTERs) centered on the pole.
+    `ph` / `sa`: offsets from the pole to place them as the PDF draws them instead (a PH left of the pole is the
+    mirrored one), e.g. TD2524712 2115931E: `"ph": [-31.05, 16.18, 30.0], "sa": [-24.18, 9.17, 25.08]`.
+  - `onebox: "L"` / `"R"` on `de2`: dead end both ways on ONE box (box and pin on that side, the other side's ticks
+    from P + 2 and its X COND from the pole); with `top` both arrows start at that pin top.
+  - `box: "B"` on `xr`/`xl`/`xb`: a SIDE XARM on each side, X CONDs from the box edges. A span guy sharing the row
+    (`share`) on a boxed side starts at the box edge (P +/- 5).
+  - `boxdn: true` with `box`: the box hangs under the X COND line (top on the row, edge on the pole) and the X
+    CONDs start at the pole.
+  - `pt` PT (2E33EB) beside the pole on the `k` side (`C` centered); `la: true` adds a SURGE ARRESTER (2E3870) 1.5 clear of each side.
+  - `omni: "L"` / `"R"` on `de1`/`de2`: INV OMNI CLOSED 5 beyond that side's dead end box insertion, on the row (`omni_lean: "R"` mirrors it).
+  - `xbank` XFMR BANK (2E3426) centered on the pole. `disc` DISCONNECT ARM (2E38FB) centered on the pole.
+  - `co` / `sa` on `arm`: front view CUTOUTs / SURGE ARRESTERs at any offsets from the pole (a 3 phase FH & LA
+    arm drawn S-SA per phase). `circx`: conductor circles at any offsets (with `pinx`).
+  - A guy without `c` is drawn with no DG callout or leader (the PDF draws the guy but labels no DG).
   - `o`: tie-break order for two items at the same height.
+- `share` finds its host by the exact same height first, then the same whole foot (21' and 21'6" rows each with an SG).
+- Cluster rule counts callout lines: a row's own lines stack down 8 apart and `above` lines up, so a two line callout
+  pushes the row above it 16 clear (TD2550925 1453777E, SG + COMM rows).
 - Anchor labels: the far anchor's at ground, the others stacked above from the farthest to the nearest (leaders never
   cross), each raised until its leader's arrow segment is at least 15.1 long (shorter and the arrowhead does not draw).
   Bearings written on the PDF go in the label (`EX: CATV ANC 122%%D`).
+- Guys on both sides of one pole: give the anchors on the other side `"gs": 1` / `-1` (the profile's `gside` is the default).
+  Each side gets its own anchor scale, lead dims, DG stack and anchor labels; the lead dims stay 12 below the ground line and
+  the pole label (centered on the pole) drops 12 per lead dim row below them.
+- DG callouts that would land on equipment callout text on their side (QP callouts) step to the nearest clear spot, and
+  the first one rises (up to attach - 8) when a leader would still run through callout text; leftovers are reported.
 - `anchors[].L` lead as written; `guys[].an` index into `anchors` as listed (any order; the generator never reorders the list).
 
 - Spec `handle_map`: `{template handle: handle in this drawing}` for stash pieces whose handle differs in a template copy
-  (TD2486645: ELEV lead `39AD07` -> `39498C`). `rspan_h`: `[box, line1..line4]` of the RULING SPAN example (TD2486645: 3948FA..3948FE).
+  (defaults are the current template: ELEV lead `39498C`, RULING SPAN `3948FA`..`3948FE`; older copies made before the template update had `39AD07` and `3948B8`..`3948BC`). `rspan_h`: `[box, line1..line4]` of the RULING SPAN example when it differs.
 
 ## Rules built in
 
@@ -114,7 +149,7 @@ addresses and ADDRESS LIST visibility, pole names and row 3 sheet numbers.
 - Pole `riser`: riser detail under ELEV (docs/risers.md): `{"items": [{"c": "SEC", "deg": -10, "size": 3, "lead": 20}], "guards": [{"t": "unistrut", "deg": 70}]}`.
   `deg` = riser position around the pole (0 = 3 o'clock, counterclockwise), `size` in inches (SEC 3, PRI 5 by default), `lead` optional
   leader angle, `L` defaults to the first profile's, `drop` pushes the detail lower. 4" risers use a radius edit; U-GUARDs use arc center/angle edits.
-- Pole `rspans`: `[[from, to, ruling span, final sag]]` as written, RULING SPAN boxes (template example 3948B8 at
+- Pole `rspans`: `[[from, to, ruling span, final sag]]` as written, RULING SPAN boxes (template example 3948FA at
   1541.4998, -817.1629) centered on Cx under the calcs (Cy - 100 when there is no calc), each 10 below the last.
 - Guys attach at the row of the item with the exact same height first (DG @ 22'6" at the 22'6" COMM row).
 - EX-LOAD and PR-LOAD are sent without `%` (the block prints its own).
